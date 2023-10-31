@@ -1,0 +1,9 @@
+/**
+ * 
+ */
+/**
+ * @author kikota
+ *
+ */
+module game {
+}
