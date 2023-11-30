@@ -1,8 +1,12 @@
-package com.functionalProgramming.day4;
+package com.functionalProgramming.day5;
+
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+
 
 class Course1 {
 	private String name;
@@ -56,7 +60,7 @@ class Course1 {
 
 }
 
-public class FP04SortedAndComparingInCustomClass {
+public class FP02MaxMinFindFirst {
 
 	public static void main(String[] args) {
 		List<Course1> courses = List.of(new Course1("Spring", "Framework", 98, 20000),
@@ -69,25 +73,40 @@ public class FP04SortedAndComparingInCustomClass {
 				new Course1("Docker", "Cloud", 92, 20000),
 				new Course1("Kubernetes", "Cloud", 91, 20000));
 		
+		Predicate<Course1> reviewScoreLessthan90redicate 
+				= course -> course.getReviewScore() < 90;
+		Predicate<Course1> reviewScoreGreaterthan90redicate 
+				= course -> course.getReviewScore() > 90;
+
+		Predicate<Course1> reviewScoreGreaterthan95redicate 
+				= course -> course.getReviewScore() > 95;
+		
 		Comparator<Course1> comparingNoOfStudentsIncreasing = Comparator.comparingInt(Course1::getNoOfStudents);
 		Comparator<Course1> comparingNoOfStudentsDecreasing = Comparator.comparingInt(Course1::getNoOfStudents).reversed();
 		Comparator<Course1> comparingNoOfStudentsAndReviewScore = Comparator.comparingInt(Course1::getNoOfStudents).thenComparingInt(Course1::getReviewScore).reversed();
-		
+		Comparator<Course1> comparingReviewScore = Comparator.comparingInt(Course1::getReviewScore);
+
 		//comparingInt instead of comparing for integer efficiency
 		
 		System.out.println(courses.stream()
-				.sorted(comparingNoOfStudentsIncreasing)
-				//.sorted(comparingNoOfStudentsDecreasing)
-				.collect(Collectors.toList()));
+				.filter(reviewScoreLessthan90redicate)
+				.min(comparingNoOfStudentsIncreasing)
+				.orElse(new Course1("","",0,0)));
+				;
 		
-		System.out.println(courses.stream()
-				.sorted(comparingNoOfStudentsDecreasing)
-				.collect(Collectors.toList()));
-		
-		System.out.println(courses.stream()
-				.sorted(comparingNoOfStudentsAndReviewScore)
-				//.sorted(comparingNoOfStudentsDecreasing)
-				.collect(Collectors.toList()));
-		
+				System.out.println(courses.stream()
+						.filter(reviewScoreGreaterthan95redicate)
+						.min(comparingNoOfStudentsDecreasing)
+						);
+				System.out.println(courses.stream()
+						.filter(reviewScoreGreaterthan95redicate)
+						.findFirst()
+						);
+				
+				System.out.println(courses.stream()
+						.filter(reviewScoreGreaterthan95redicate)
+						.findAny()
+						);
+
 	}
 }

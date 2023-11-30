@@ -1,7 +1,9 @@
-package com.functionalProgramming.day4;
+package com.functionalProgramming.day5;
 
+
+import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 class Course {
 	private String name;
@@ -55,7 +57,7 @@ class Course {
 
 }
 
-public class FP03AnyAllNoneMatchCustomClass {
+public class FP01SkipLimitTakeandDropWhile {
 
 	public static void main(String[] args) {
 		List<Course> courses = List.of(new Course("Spring", "Framework", 98, 20000),
@@ -68,43 +70,32 @@ public class FP03AnyAllNoneMatchCustomClass {
 				new Course("Docker", "Cloud", 92, 20000),
 				new Course("Kubernetes", "Cloud", 91, 20000));
 		
-		
-		Predicate<Course> reviewScoreGreaterthan90redicate 
-						= course->course.getReviewScore()>90;
-		
-		Predicate<Course> reviewScoreGreaterthan95redicate 
-						= course->course.getReviewScore()>95;
-		Predicate<Course> reviewScoreLessthan90redicate 
-						= course->course.getReviewScore()<90;
+		Comparator<Course> comparingNoOfStudentsIncreasing = Comparator.comparingInt(Course::getNoOfStudents);
+		Comparator<Course> comparingNoOfStudentsDecreasing = Comparator.comparingInt(Course::getNoOfStudents).reversed();
+		Comparator<Course> comparingNoOfStudentsAndReviewScore = Comparator.comparingInt(Course::getNoOfStudents).thenComparingInt(Course::getReviewScore).reversed();
+		Comparator<Course> comparingReviewScore = Comparator.comparingInt(Course::getReviewScore);
 
-						
-	//anyMatch allMatch noneMatch
-		System.out.println(courses.stream()
-			.allMatch(reviewScoreGreaterthan90redicate));
-		System.out.println(courses.stream()
-				.allMatch(reviewScoreGreaterthan95redicate));
+		//comparingInt instead of comparing for integer efficiency
 		
 		System.out.println(courses.stream()
-				.noneMatch(reviewScoreGreaterthan95redicate));
+				.sorted(comparingNoOfStudentsIncreasing)
+				.skip(2)
+				.collect(Collectors.toList()));
+		
 		System.out.println(courses.stream()
-				.noneMatch(reviewScoreLessthan90redicate));
+				.sorted(comparingNoOfStudentsDecreasing)
+				.limit(3)
+				.collect(Collectors.toList()));
 		
-		System.out.println(courses.stream().anyMatch(reviewScoreGreaterthan95redicate));
-		
-		
-		System.out.println("----------------");
-		
-		Predicate<Course> noofStudentsGreaterThan20kPredicate 
-				= course->course.getNoOfStudents()>20000;
-		Predicate<Course> noofStudentsGreaterThan25kPredicate 
-				= course->course.getNoOfStudents()>25000;
 		System.out.println(courses.stream()
-				.allMatch(noofStudentsGreaterThan20kPredicate)	);
+				//.sorted(comparingNoOfStudentsAndReviewScore)
+				//.sorted(comparingNoOfStudentsDecreasing)
+				.takeWhile(course->course.getReviewScore()>=95)
+				.collect(Collectors.toList()));
 		System.out.println(courses.stream()
-				.anyMatch(noofStudentsGreaterThan20kPredicate)	);
-		System.out.println(courses.stream()
-				.noneMatch(noofStudentsGreaterThan25kPredicate));
-		
+				//.sorted(comparingNoOfStudentsAndReviewScore)
+				.sorted(comparingReviewScore)
+				.dropWhile(course->course.getReviewScore()<95)
+				.collect(Collectors.toList()));
 	}
 }
-	
