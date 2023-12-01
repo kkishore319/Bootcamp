@@ -98,5 +98,10 @@ public class FP04GroupingonCustomClass {
 				.collect(Collectors.groupingBy(Course4::getCategory,Collectors.mapping(Course4::getName,Collectors.toList())))
 				
 				);
+		System.out.println(
+				courses.stream()
+				.collect(Collectors.groupingBy(Course4::getCategory,Collectors.maxBy(Comparator.comparing(Course4::getReviewScore))))
+				
+				);
 	}
 }
