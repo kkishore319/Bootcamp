@@ -1,0 +1,54 @@
+ 1. db.employees.distinct("Edlevels");
+
+2. db.employees.aggregate([
+{$match:{Job:"Analyst"}},
+{$project:{_id:0,FirstName:1,Salary:1,Commission:1}}
+]).pretty()
+
+3 db.employees.aggregate([
+{$project:{_id:0,Empno:1,FirstName:1,PhoneNo:1,Job:1,EdLevel:1,Sex:1}},
+{$sort:{Empno:1}},
+{$skip:10}
+]).pretty()
+
+4. db.employees.aggregate([
+{$project:{_id:0,Empno:1,FirstName:1}},
+{$sort:{Empno:-1}},
+{$limit:4}
+]).pretty() 
+
+5. db.employees.aggregate([
+{$group:{_id:"$DeptNo",total_salary:{$sum:"$Salary"}}},
+{$sort:{total_salary:-1}}
+])
+
+6. db.employees.aggregate([
+{$match:{Job:{$in:["Clerk","SalesRep"]}}},
+{$group:{_id:"$DeptNo","salary_total":{$sum:{"$Salary"}}}},
+{$sort:{salary_total:1}}
+])
+
+7. db.employees.aggregate([
+{$project:{_id:0,BookTitle:1,month:{$month:"$PublishDate"},year:{$year:"$PulishDate"}}},
+{$match:{year:{$gte:1950}}},
+{$sort:{year:1}}
+])
+
+8. db.books.aggregate([
+{$project:{_id:0,"BookTitle":1,BookAuthor:1,PriceList:{
+$switch:{
+	branches:[
+		{case : {$gte:["$BookPrice",10000]},then:"High Cost"},
+		{case : {$and:[{$gt:["$BookPrice",5000]},{$lte:["$BookPrice",10000]}]},then:"Medium Cost"},
+		{case:{$lte:["$BookPrice",5000]},then: "Least Cost"}
+] 
+}
+}}},
+{$match:{BookCategory:"Classics"}}
+])
+
+
+
+
+
+
