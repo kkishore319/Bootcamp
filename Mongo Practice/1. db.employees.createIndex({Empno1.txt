@@ -1,0 +1,12 @@
+1. db.employees.createIndex({Empno:1})
+
+2. db.employees.createIndex({
+LastName:1,Salary:1
+})
+
+3. db.employees.createIndex({DeptNo:1})
+db.employees.dropIndex({DeptNo:1})
+db.employees.createIndex({Empno:1})
+db.employees.getIndexes();
+
+4. db.employees.getIndexes();
