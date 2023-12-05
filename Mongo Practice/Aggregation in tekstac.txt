@@ -47,6 +47,90 @@ $switch:{
 {$match:{BookCategory:"Classics"}}
 ])
 
+9. db.employees.find({"Email":{$regex:"(?i)123gmail.com$"}}).count()
+
+10. db.books.aggregate([
+{$project:{_id:0,BookTitle:1,BookPrice:1,ReducedPrice:{
+$subtract:["$BookPrice",{$multiply:["$BookPrice",0.]}]
+}
+}}
+])
+
+11. db.books.aggregate([
+{
+$unwind:{path:"BookCategory",includeArrayIndex:"BookIndex"}
+}
+])
+
+12. db.books.aggregate([
+{$unwind:{path:BookCategory,preserveNullAndEmptyArrays:true}},
+{$group:{_id:"$BookCategory",TotalPrice:{$sum:"$BookPrice"}}},
+{$sort:{TotalPrice:-1}}
+])
+
+13. db.employees.aggregate([
+{$match:{Job:"Operators",Edlevel:{$lt:15}}},
+{$project:{_id:0,FirstName:1,HiredYear:1,Edlevel:1,UpdatedSalary:{
+$add:[{"$Salary"},{$multiply:["$Salary",0.2]}]
+}}},
+{}
+]).pretty()
+
+14. db.books.aggregate([
+{$match:{BookPublisher:"James Patrick",Price:{$gt:2000}}},
+{$project:{_id:0,BookInfo:{
+$concat:["$BookTitle" ," is written by ","$BookAuthor"]
+},Published_Year:{
+$year:"$PublishDate"}
+}}
+]) 
+
+15. db.employees.aggregate([
+{$match:{DeptNo:{$ne:""},HiredYear:2000}},
+{$project:{_id:0,FirstName:1,Password:{
+$concat:[ {$substr:["$FirstName",0,3]},{$substr:["$DeptNo",0,2]}]
+}},
+{$sort:{FirstName:-1}}
+])
+
+16. db.books.aggregate([
+{$group:{_id:{
+	year:{$year:"$PublishDate"}},
+	PublishedBooks:{$addToSet{"$BookTitle"}}
+}}
+])
+
+17. db.employees.aggregate([
+{$match:{BirthYear:{$gt:1980},DeptNo:{$ne:""}}},
+{$project:{FirstName:1,LastName:1,Job:1}},
+//{$out:"Employee_Information"}
+])
+
+//db.Employee_Information.find()
+
+
+18. db.books.aggregate([
+{$match:{Price:{$gt:3000},BookCategory:Action}},
+{$addFields:{AuthorSignature:"Available"}}
+]).pretty()
+
+19. db.books.aggregate([
+{$lookup:{
+	from: "author",
+	localField:"BookAuthor",
+	foreignField:"Authorno",
+	as:"Author_Info"
+}},
+{$match:{BookLanguage:"English"},Price:{$lt:3000}}},
+{$project:{_id:0,BookTitle:1,BookPublisher:1,"Author_Info.FirstName":1,"Author_Info.PhoneNo":1,"Author_Info.BirthYear":1}},
+{$sort:{"Author_Info.FirstName":1}}
+]).pretty()
+
+20. db.books.aggregate([
+{$match:{BookLanguage:"English",BookCategory:"Action"}},
+{$group:{_id:"$BookPublisher",count:{$sum:1}}},
+{$sort:{count:-1}}
+]).pretty()
 
 
 

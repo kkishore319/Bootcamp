@@ -1,0 +1,30 @@
+ practice excercises
+
+1a. db.employees.aggregate([
+{$project:{
+	_id:0,
+	Job:1,
+	Gender:{$cond:{if:{$eq:["Sex","M"]},then : "Male",else: "Female" }},
+	Name: {$concat:["$FirstName"," ","$LastName"]}
+}}
+])
+
+1b. db.employees.updateMany({},{
+$rename:{"Salary":"income"}
+})
+
+1. db.restaurants.find({"address.coord.latitude":{$lt:-95.48}});
+
+2. db.restaurants.aggregate([
+{$project:{name:1,borough:1,cuisine:1}}
+])
+
+3. db.sourceCollection.aggregate([
+  {
+    // Your aggregation stages go here
+    //  $match, $group, $project, etc.
+  },
+  {
+    $out: "targetCollection"
+  }
+])
