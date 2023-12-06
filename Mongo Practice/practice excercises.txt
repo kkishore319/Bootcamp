@@ -28,3 +28,50 @@ $rename:{"Salary":"income"}
     $out: "targetCollection"
   }
 ])
+
+4. db.patients.aggregate([
+  {
+    $match: {
+      "PayAmount": { $gt: 1000, $lte: 2000 }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      "PaymentMode": 1,
+      "PatientId": 1,
+      "FirstName": 1,
+      "City": 1
+    }
+  },
+  {
+    $out: "payment_copy"
+  }
+])
+
+5. // Find documents in the copied collection
+db.payment_copy.find()
+ 
+// Aggregate in the copied collection, grouping by PaymentMode and creating an array of unique patient names
+db.payment_copy.aggregate([
+  {
+    $group: {
+      "_id": {
+        "Transaction": "$PaymentMode",
+      },
+      "patients": { $addToSet: "$FirstName" }
+    }
+  }
+])
+....output
+{ 
+  "_id": { "Transaction": "Credit" },
+  "patients": ["John", "Bob"]
+},
+{ 
+  "_id": { "Transaction": "Cash" },
+  "patients": ["Alice"]
+}
+
+$group:{_id:"$PaymentMode",patients:{$addToSet:"$FirstName"}}
+_id:"Credit"

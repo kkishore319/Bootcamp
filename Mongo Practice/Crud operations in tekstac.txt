@@ -25,7 +25,9 @@ db.books.find({BookCategory:{$size:2}}).count()
 
 db.books.find({$and:[{"reviews.rating":5},{"reviews.review_text":"Good"}]},{_id:0,BookTitle:1,BookAuthor:1})
 
-db.employees.find({HireYear:{$and:[{$gte:1988},{$lte:2005}]}}).count()
+db.employees.find({
+$and:[HireYear:{$gte:1988},HireYear:{$lte:2005}]
+}).count()
 
 db.employees.find(
 {Sex:"F",$and:[{Salary:{$gte:80000},{Salary:{$lte:150000}}], DeptNo:{$ne:"E11"}}
