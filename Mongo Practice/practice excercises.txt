@@ -8,6 +8,7 @@
 	Name: {$concat:["$FirstName"," ","$LastName"]}
 }}
 ])
+ 
 
 1b. db.employees.updateMany({},{
 $rename:{"Salary":"income"}
