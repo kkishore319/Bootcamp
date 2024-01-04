@@ -1,0 +1,78 @@
+aws global datacenters
+
+regions - 20 (5 coming) // 33 
+az- 61  // 105
+edge locs - 158  // 600+
+regional caches - 11  // 13
+:  improves performance for your viewers. Regional Edge Caches, in addition to improving performance, also help reduce the load on your origin resources, minimizing operational burden associated with scaling your origin and reducing your origin costs.  free 
+
+services -130 //200+
+Local zones 36
+wavelength zones 29
+
+
+Region - Independent geographic area
+az- Multiple isolated locations/ data centers within a region
+
+categorized as 
+global 	-iam, billing, route53		
+regional- s3, dynamoDB
+az level- ec2, rds, ebs
+
+aws compute and analytical services-
+Ec2, autoscaling , lambda , elb, ecs and EMR, Kinesis, Athena(interactive query Engine), QuickSight (BI ,dashboards), Glue(ETL)
+
+
+Aws storage and database-
+EBS, S3, EFS   and RDS , DynamoDB, Redshift, ElastiCache
+
+Aws network and management services-
+VPC, Route53, Direct connect,CloudFront and CloudWatch , CloudFormation(Infra as a Code), Elastic Beanstalk(application orechestration service), OpsWorks(infrastructure Config. Management)
+
+aws Applicatin and developement Services-
+API gateway(manage REST and websocket APIs),SQS, SNS, SES, congnito and 
+CodeCommit, CodeBuild(continuous integration service),CodeDeploy(automated deployments), Code Pipline(continuous Delivery Services) , Code Star(develop build, deploy manage & track)
+
+
+Let's create an app(normal way) // 
+-first need private network// VPC
+-a webserver to run code via vms with disks // EC2 & EBS
+- users may use it via IP // ROUTE53
+- to extend the application by adding bussines logic we need app server with vms // EC2
+- also relational database is also required coz we have for diff servers // RDS
+- need horizontal scaling so add LB // AUTO SCALING & ELB
+- need DNS for domain name // ROUTE 53
+- add noSql db for meta data and connections// DYNAMODB
+- add cache Db for read same data // ELASTICCACHE
+- for media files , we need external storage // S3
+- content filter can also be added if needed // REKOGNITION ML
+- click stream analysis( to read and show what we click like show approp. ads) for this we also need another storage // KINESIS & S3
+- add spark/hadoop for data operations like aggregation and sorting // EMR
+- add data warehouse ( BI like features data analytics like trending things etc  ) // REDSHIFT
+- we can link external storage to users via WEB BROWSER // S3
+- for mobile ( different devices ) we need other external storages by video converter // LAMBDA for converter & S3.
+-we need CDN for cacheing the videos so it will have low latency to connect media // CLOUDFRONT EDGE LOCATIONS 
+- for notifications we need SMS and email services // SQS, SNS 
+- for messaging we need mq services//
+- for monitoring we need ETL service // GLUE
+- for monitoring dashboard on the services // CLOUDWATCH
+
+extra services in AWS
+- we can have API GATEWAY for rest API 
+- for ...congnito
+- for security services we can have IAM  , KMS (encryption),
+- ACM(amazon certificate manager to secure the communication)
+-  WAF for application protection at ips and cdns
+- for compliance (free from vulnalerability) INSPECTOR
+- for development & devops services we have cloudformation 
+- codecommit to have repo of code for diff teams 
+- to build the code from codecommit we have codeBuild 
+- after testing we can deploy by codeDeploy
+- with codepipline we can pipeline all code... once
+
+
+
+
+
+
+
