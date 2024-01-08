@@ -1,0 +1,178 @@
+1. EC2 instance storage:
+
+EBS: 
+elastic block store volume is a network drive attaches to instances.
+persist data even after their termination and can be mounted to one instace (ccp) but at developer level multi attach feature is there.
+locked to one az if want to move use snapshot
+to use we need to provide the capacity like GBs and IOPS
+
+by default if rooted EBS is deleted on termination where other attached EBS vols are not deleted.
+
+EBS Snapshots:
+Backup for EBS , is incremental backup , can copy across az or region 
+features: 
+1. EBS Snapshot Archive: archive tier(75% cheaper) takes 24-72 hrs to restore
+2. Recycle Bin: recycle bin for accidental deletion and retention is 1day-1yr
+3. Fast Snapshot Restore(FSR): force full initialization of snapshot for no latency on first use(expensive)
+
+AMI(Amazon Machine Image):
+customization of ec2 instance, can add our software, config., OS, monitoring.,etc. Faster boot/config. time because all software is pre-packaged.
+built for specific region( copied across regions)
+launch ec2 intances from public AMI, our own AMI , our AWS Marketplace AMI
+
+process: start ec2 and customize, stop instance(for data integrity), Build an AMI(creates snapshots), launches instances from other AMIs
+
+EC2 instance store:
+high-performance hardware disk, better I/O performance, if instance is stopped they will loss their storage, use as buffer/cache/scratch data/temporary content, risk of data loss if hardware fails, backups and replication are our responsiblility.
+
+EBS Volume types(6 types):
+--------------------------------------
+GP ( general purpose SSD volume balances price and perf.) 
+-cost effective, low latency 
+-1 GiB - 16 TiB
+-system boot vols, virtual desktops, dev and test envs
+
+1. gp2(SSD): 
+small gp2 vol can burst IOPS to 3,000,
+size of vol and IOPS are linked, max is 16,000
+3 IOPS per GB, means 5,334 GB we are at max IOPS
+
+2. gp3(SSD): 
+baseline 3,000 IOPS and throughput 125 MiB/s
+can increase 16,000 IOPS and throughput upto 1000 MiB/s independently
+---------------------------------
+Provisioned IOPS(PIOPS)(highest perf. SSD vol for mission critical low latency or high throughput workloads)
+-apps that need more than 16000 IOPS
+- great for database workloads (sensitive to storage perf and consistency)
+
+3. io 1:(4GiB - 16 TiB)
+max PIOPS 64,000 for nitro instances and 32,000 for other
+increase PIOPS independently,more durability and more IOPS per GiB
+
+4. io 2:( 4 GiB - 64 TiB)
+sub-millisecond latency 
+max PIOPS 256,000 with IOPS:GiB is 1,000:1
+-----------------------------------------------------
+(Low cost HDD )
+can't be used for boot vol
+125 GiB - 16 TiB
+
+5. st 1:(frequently accessed) throughput optimized 
+Big data, data warehouses, log processing 
+max throughput 500 MiB/s, max IOPS 500
+
+6. sc 1: (less freq. accessed) Cold HDD
+lowest cost
+max throughput 250 MiB/s, max IOPS 250
+--------------------------------------------
+EBS Multi-Attach :
+for only provisioned iops family io1,io2
+attach same EBS vol to multiple ec2 instances in same AZ
+each instance has full read& write permissions to high-perf. vol
+use case: achieve high application availability in clustered linux apps(eg: teradata)
+	applications must manage concurrent write ops.
+upto 16 instances only at a time	
+file system must be cluster-aware (not XFS, EXT4)
+
+
+Amazon EFS- Elastic File System
+Managed NFS (network file system) can be mounted to many eC2
+EFS works with instances in multi-AZ
+highly available, scalable , expensive(3x gp2), pay per use
+use cases: content management , web serving, data sharing, Wordpress
+uses interanl NFSv4 protocol
+uses security grp to control access to EFS
+compatible with linux based AMIs(not windows)
+POSIX file system(linux) that has std file API
+
+EFS scale: 1000s of concurrent NFS client, 10 GB+/s throughput
+grow petabyte scale nfs automatically 
+
+performance Mode(set at EFS creation time)
+general purpose(default): latency sensitive use cases (webservers, CMS etc)
+max I/O-higher latency,throughput,highly parallel(bigdata,media processing)
+
+throughput Mode:
+Bursting: 1 TB= 50 MiB/s + burst of 100 MiB/s
+Provisioned: set throughput regardless storage size(eg:1 GiB/s for 1 Tb storage)
+Elastic:  automatically scales up and down based on workloads
+upto 3 GiB/s for reads and 1 GiB/s for write 
+used for unpredictable workloads
+
+EFS- storage classes
+storage Tiers ( lifecycle management feature- move file after N days)
+std : for freq. access
+infreq access (EFS-IA): cost to retrieve files, lower price to store, enable EFS-IA with lifecycle policy
+
+availability and durability:
+std: multi az, great for prod
+one zone : one Az, grear for dev, back enabled by default, compatible with IA(EFS One Zone-IA) 
+90% in cost savings
+
+
+EBS vs EFS 
+
+EBS: one instance at time( except io1& io2)
+locked at az level, gp2: increases IO if disk size increases, gp3: IO can increased independently
+to migrate across az: need snapshots and restore at respective az , don't backup while application is handling lot of traffic.
+
+EFS: mounted to 100s of instances across az, EFS share website files (wordpress), only for linux instances, costly than EBS, can leverage EFS-IA for cost savingsf
+==============================================================================================
+2. AWS Fundamentals: ELB+ASG
+
+scalability: by adapting the application can handle greater loads
+a. vertical scalability(increase size)
+for non distributed systems like databases like RDS , ElastiCache can scale verically 
+
+b. horizontal scalability(increase number)(elasticity)
+for distributed systems, common web apps/modern apps
+
+High Availability
+having application at least 2 Azs, to survive a data center loss, can be passive for RDS Multi-Az and active for horizontal scaling
+
+Load balancing:
+servers that forward traffic to multiple servers downstream
+
+ELB(Elastic Load Balancer):
+managed load balancer, aws takes care of upgrades, maintenance, high availability and few config. knobs
+if we have our own LB but it will cost less but will be alot more effort on our end
+it's integrated with many aws services like ec2, ASG, ECS, ACM,CloudWatch, Route 53, WAF,AWS Global Accelerator
+
+Health Checks:(crucial for Load balancers)
+enable LB to know if instances it forwards traffic to are available to reply to request and it's done on a port and route 
+
+Types of load balancers
+Classic LB: old generation-2009: HTTP,HTTPS,TCP,SSL(Secure TCP)
+Application LB: new -2016: HTTP,HTTPS,WebSocket
+Network LB:new-2017: TCP, TLS(secure TCP), UDP
+Gateway LB:2020:Operates at layer 3 (network)- IP protocol
+
+Application Load Balancer (ALB) layer 7(HTTP)
+-load balancing to multiple HTTP apps across machines(target grps)
+-load balancing to multiple apps on the same machine (eg:containers)
+-support for HTTP/2 and WebSocket
+-support redirects ( from HTTP to HTTPS for eg)
+
+Routing tables to diff target grps:
+routing based on : 
+	-path in url(example.com/users & example.com/posts)
+	-hostname in url (one.example.com & other.example.com)
+	-Query String,Headers (example.com/users?id=123&order=false)
+ALB are great fit for microservices & container-based apps (docker & ECS)
+has port mapping feature to redirect to a dynamic port in ECS
+
+ALB target grps:
+ec2 instances ( managed by ASG) -HTTP
+ECS tasks( managed by ECS itself)- HTTP
+lambda fns - HTTP req is translated into JSON event 
+IP Address-must be private IP's 
+ALB can route to multi target grps
+Health checks are at target grp level
+
+while connecting through ALB from client to instance
+client Ip can't be known by instance instead its knows ip which is private ip fo ALB
+if want know the ip of client it will look into extra headers in HTTP req which are port and proto (x-forward-for)
+
+
+
+
