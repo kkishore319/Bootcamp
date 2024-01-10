@@ -253,7 +253,123 @@ ASG Instance Refresh
 to update launch template and then recreate all ec2 instances 
 we can use native feature of instance refresh and setting of minimum healthy percentage like 60%
 
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+Amazon RDS (slide: 138)
+relational database (managed database) uses SQL query language 
+has postgres, mysql, MariaDb, Oracle, Microsoft SQL server, Aurora
+-automated provisioning, OS patching
+-continuonus backups and restore to specific timestamp
+-Monitoring dashboards
+-Read Replicas for improved read perform
+-Mutli az setup for disaster recovery
+-Maintenance windows for upgrades
+-Scaling capability
+-Storage backed by EBS(gp2 or io1)
+-we can't SSH into instances cause RDS is managed service
 
+RDS -storage auto scaling
+-when RDS detects running out of free database storage, it scales automatically
+-can set maximum storage threshold 
+-automatically modify storage if: 
+	-free storage is less than 10% of allocated storage
+	-low-storage lasts at least 5 min 
+	-6 hrs have passed since last modification
+- uses for unpredictable workloads
+
+RDS read replicas:
+upto 15
+within az, cross az, cross region 
+replication is ASYNC so reads eventually cosistent
+replicas can be promoted to their own DB
+read replicas ae used for SELECT only kind of statements (not INSERT, DELETE, UPDATE)
+in aws there's a network cost when data goes from one az to other 
+- for RDS read replicas within same region, we don't pay any
+
+RDS Multi Az(Disaster Recovery)
+SYNC replication
+one DNS name -automatic app failover to standby
+increase availability
+not used for scaling 
+- read replicas can also be setup as Multi Az for disaster recovery 
+- if single az to multi az: zero downtime operation, just click on modify and following happens interally:
+	-a snapshot is taken
+	-a new DB is restored from the snapshot in new AZ
+	-Synchronization is established between the two databases
+
+Amazon Aurora (slide 147)
+
+proprietary technology from AWS (not opensourced)
+Postgres (3x) and MySQL(5x) are supported and have improve performance of RDS
+automatically grows in increaments of 10GB to 128TB
+have upto 15 replicas and replication processs is faster than MySQL
+
+Aurora high availability and read scaling
+6 copies of data across 3 az:
+4 copies of 6 for writes , 3copies of 6 for reads 
+self healing .storage is striped across 100s of vols
+one master writes+ 15 read replics(upto)
+automated failover for master in less than 30 sec
+support cross region replication
+
+will have two endpoints 
+Writer endpoint to master 
+Reader endpoint( with load balancer at connection level ) to read replicas with auto scaling
+
+RDS & Aurora Security
+at rest:
+databases master & replicas encryption using KMS (defined at launch time)
+if master is not encrypted, the read replicas cannot be encrypted
+to encrypt an un-encrypted database, go through snapshot & restore as encrypted
+
+in flight:
+TLS- ready by default, use the AWS TLS root certifcates client side
+IAM authentication: by iam roles 
+security grps: control network access to RDS (block or allow ip,security grps, ports)
+No SSH except for RDS Custom 
+Audit logs can enabled and sent to CloudWatch Logs for longer retention
+
+Amazon RDS Proxy:
+full managed database proxy for RDS
+allows apps to pool and share DB connections established with database
+improves database efficiency by reducing stress on database resources and minimize open connections ( and timeouts)
+serverless(integrity with lambdas),autoscaling highly avialable(multi az)
+reduced RDS & Aurora failover time (66%) using proxy
+enforce IAM authentication for DB, and securely store credentials in Secrets Manager
+RDS proxy is never publicy accessible ( only by VPC)
+ 
+Amazon ElasticCache 
+managed Redis or Memcached
+in-memory databases with high performance, low latency
+reduces load off of databases for read intensive workloads, makes app stateless
+REDIS : multi az , read replicas, data durability using AOF persistence,Backup and restore, supports sets and sorted sets
+
+MEMCACHED : multi-node of partitioning of data(sharding),no high avail, non persistent, no backup and restore, multi-thread architecture
+
+caching strategies
+Lazy loading/ cache-side/lazy population:
+pros: only req data is cached and node failure are not fatal 
+cons: 
+	cache miss penalty that results 3 round trips, noticeable delay for that req, 
+	stale data: data can be updated in the database and outdated in the cache
+
+Write Through-add or update cache when database is updated:
+pros: data in cache is never stale, reads are quick  and write penalty vs read penalty(each write requires 2 calls)
+cons: missing data until it is added/updated in the DB. Mitigatin is to implement Lazy Loading strategy as well
+
+Cache Evictions and Time-to-live(TTL)
+cache eviction can occur in three ways:
+you delete the item explictly in the cache
+item is evicted because the memory is full and it's not recently used(LRU)
+you set an item time-to-live(TTL)
+-TTL are good for leaderboards, comments,activity streams
+-TTL can range from few seconds to hours or days
+ 
+Amazon MemoryDB for Redis
+Redis-compatible, durable.in-memory database service
+ultra fast performance with 160 millions of req/second
+durable in-memory data storage with multi az transactional log
+scale seamlessly from 10s GBs to 100s TBs of storage 
+use cases: web and mobile apps, online gaming, media streaming
 
 
 
