@@ -255,6 +255,7 @@ we can use native feature of instance refresh and setting of minimum healthy per
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------
 Amazon RDS (slide: 138)
+
 relational database (managed database) uses SQL query language 
 has postgres, mysql, MariaDb, Oracle, Microsoft SQL server, Aurora
 -automated provisioning, OS patching
@@ -279,7 +280,7 @@ RDS -storage auto scaling
 RDS read replicas:
 upto 15
 within az, cross az, cross region 
-replication is ASYNC so reads eventually cosistent
+replication is ASYNC so reads eventually consistent
 replicas can be promoted to their own DB
 read replicas ae used for SELECT only kind of statements (not INSERT, DELETE, UPDATE)
 in aws there's a network cost when data goes from one az to other 
@@ -364,12 +365,74 @@ you set an item time-to-live(TTL)
 -TTL are good for leaderboards, comments,activity streams
 -TTL can range from few seconds to hours or days
  
-Amazon MemoryDB for Redis
+Amazon MemoryDB for Redis:
 Redis-compatible, durable.in-memory database service
 ultra fast performance with 160 millions of req/second
 durable in-memory data storage with multi az transactional log
 scale seamlessly from 10s GBs to 100s TBs of storage 
 use cases: web and mobile apps, online gaming, media streaming
+
+========================================================================================================
+
+Amazon Route 53:(165)
+highly available , scalable, fully managed and authoritative(means customer (you) can update the DNS records) DNS
+-domain Registrar
+checks health of resources and only service with 100% SLA  
+
+Records:
+Each record contains:
+Domain/subdomain Name: eg: example.com
+Record type: eg: A or AAAA
+value: eg: 12.34.56.67
+Routing Policy : how Route53 responds to queries
+TTL: amount of time the record cached at DNs resolvers
+- it supports follwing DNS record types:
+must know : A, AAAA, CNAME, NS
+other : CAA, DS , MX, NAPTR, PTR, SOA, TXT, SPF, SRV 
+
+A: maps a hostname to IPv4
+AAAA: maps to IPv6
+CNAME: maps a hostname to another hostname (but the  target domain name must have A or AAAA record, can't create a CNAME record for the top node of DNS namespace, eg: we can't create example.com but can www.example.com)
+NS : Name servers for the Hosted Zone
+
+Hosted Zones: container for records that define how to route tarffic to domain and it subdomains
+public hosted Zones:route traffic on the Internet type of records are there
+private hosted Zones: route traffic within one or more VPCs(private domain names) type of records are there 
+- charge is $0.50 month per hosted zone
+and for a domain name it will cost like 12$ per year
+
+Records TTL(Time To Live)
+High TTL: eg: 24hrs
+less traffic on route 53 
+possibly outdated records
+
+Low TTL: eg:  60sec
+more traffic on route53(charges increase)
+records are outdated for less time
+easy to change records
+
+-except for alias records, TTL is mandatory for each DNS record
+
+CNAME vs Alias
+Aws resources(load balancer,cloudfront) expose an aws hostname lb 1-1234.us-east-2.elb.amazonaws.com and we want myapp.mydomain.com
+
+cname:
+	points a hostname to anyother hostname(app.mydomain.com=>blabla.anything.com
+	ONLY FOR NON ROOT DOMAIN(aka something.mydomain.com)
+alias:
+	points a hostname to an aws resource(app.mydomain.com=>blabla.amazonaws.com)
+	works for ROOT DOMAIN and NON ROOT DOMAIN(aka mydomain.com)
+	free of charge 
+	native health check
+
+Alias Records:
+maps hostname to an aws resource
+an extension to DNS functionality
+automatically recognizes changes in the resource's IP addresses
+unlike CNAME it can be used for top node of DNS namespace(zone apex)eg: example.com
+alias record is always of type A/AAAA for aws resources(IPv4/IPv6)
+alias records targets are : ELB, cloudfront distributions, API gateway,Elastic Beanstalk env,S3 websites, VPC inteface endpoints, Global Accelerator accelerator and route 53 record in same Hosted Zone
+-can't use ALIAS record for ec2 DNS name
 
 
 
