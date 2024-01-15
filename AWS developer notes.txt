@@ -434,6 +434,429 @@ alias record is always of type A/AAAA for aws resources(IPv4/IPv6)
 alias records targets are : ELB, cloudfront distributions, API gateway,Elastic Beanstalk env,S3 websites, VPC inteface endpoints, Global Accelerator accelerator and route 53 record in same Hosted Zone
 -can't use ALIAS record for ec2 DNS name
 
+Simple Routing:
+route traffic to a single resource 
+can specify multiple values in the same record
+if multiple values are returned, a random one is chosen by the client
+when Alias enabled, specify only one AWS resource
+can't be associated with Health Checks
+
+Weighted Routing:
+control the % of the requests that go to each specific resource 
+assign each record a relative weight :
+	traffic (%)= weight for a specific record /sum of all weights of all records
+	weights don't need to sum up 100
+DNS records must have the same name and type
+can have Health Checks 
+usecases: load balancing between regions, testing new app versions
+assign a weight of 0 to a record to stop sending traffic to resource 
+if all weight are zero then traffic spread equally
+
+Latency Routing:
+redirect to resource that has least latency close to us
+super helpful when latency for users is a priority
+Latency is based on traffic between users and AWS Regions 
+Germany users may be directed to US(if that's the lowest latency)
+can be associated with Health Checks(has a failover capability)
+
+Health Checks
+HTTP health checks are only for public resources(private also via cloudwatch)
+Health check=> Automated DNS Failover:
+1. Health checks monitor an endpoint (app,server,other service)
+2. Health checks that monitor other health checks(calc health checks)
+3. Health checks that monitor CloudWatch Alarms(full control) eg: throttles of DynamoDB, alarms on RDS, custom metrics(private)
+			
+health checks- Monitor an Endpoint
+about 15 global health checkers will check the endpoint health
+-Healthy/unhealthy Threshold -3(default)
+-Supported protocol: HTTP, HTTPS, TCP
+- if> 18% of health checkers report the endpoint healthy, route53 considers it healthy.
+-ability to choose which locations you want route 53 to use
+Health Checks pass only when endpoint responds with 2xx or 3xx status codes
+Health Checks can be setup to pass/fail based on text in the first 51200 bytes of the response
+configure you router/firewall to allow incoming requests from Route 53 Health Checkers
+
+Route 53- Calculated Health Checks
+combine the results of multiple child health checks into single parent health check
+we can use OR , AND, NOT on these child health checks
+can monitor up 256 child health checks
+specify how many of health checks need to pass parent
+usage: perform maintenance to our website without causing all health check to fail
+
+Health Checks - private Hosted Zones
+route 53 health checkers are outside the VPC
+They can't access private endpoints(private VPC or on-premises resource)
+we can create CloudWatch Metric and associate a CloudWatch Alarm, then create a Health Check that checks the alarm itself
+
+Failover Routing:
+there will two records one primary and other secondary 
+if one failed then by health checks it will connect to secondary 
+and if primary gets it's connection then domain will show primary
+
+Geolocation Routing:
+routing based on user location
+specify location by continent, country or by US state 
+should create a DEFAULT record(in case there's no match on location)
+usecases: website localization, restrict content distribution, load balancing..
+
+Geoproximity Routing:
+route traffic based on geographic location of users and resources
+ability to shift more traffic to resources based on defined BIAS
+to change the size of geographic region, specify bias value:
+	to expand (1 to 99) more traffic to resource
+	to shrink (-1 to -99) less traffic 
+resouces can be : aws resources(specify AWS region) and Non-AWS resources(specify latitude and longitude)
+- we have to use Route 53 Traffic Flow to use this feature 
+
+Route 53 - Traffic Flow:
+Simplify the process of creating and maintaining records in large and complex configurations
+visual editor to manage complex routing decision trees.
+configurations can be saved as Traffic Flow Policy:
+	can be applied to different Route 53 Hosted Zones(diff domain names)
+	supports versioning
+
+IP-based Routing :
+routing is based on client's IP address
+we provide a list of CIDRs for our clients and the corresponding endpoints/locations(user-IP-to-endpint mappings)
+usecases: Optimize performance, reduce network costs..
+eg: route end users from a particular ISP to a specific endpoint 
+
+Multi-Value Routing:
+used when routing traffic to multiple resources
+Route 53 return multiple values/resources
+can be associated with Health Checks(returns only healthy)
+up to 8 healthy records are returned for each Multi-Value query
+Multi-Value is not substitute for having an ELB
+
+Domain Registar vs DNS service
+we buy or register our domain name with Domain Registar typically by paying annual charges(eg: GoDaddy , Amazon Registar inc....)
+Domain Registar usually provides DNS service to manage our DNS records
+but we can use other DNS service also
+eg: purchase domain in GoDaddy and use Route 53 to manage DNS records.
+
+3rd party Registar with Route 53
+if we bought domain on 3rd party registar, we can still use Route 53 as DNS Service provider
+1. create a Hosted Zone in Route 53
+2. Update NS Records on 3rd party website to us Route 53 Name Severs
+- every Domain Registar usually comes with some DNS features
+======================================================================================================================
+
+VPC & Subnets 
+
+VPC : private network to deploy our resources(regional resource)
+Subnets: allows us to partition network inside our VPC(Az resource)
+public subnet: accessible from the internet
+private subnet: not accessible from the internet 
+-to define access to internet and between subnets, we use Route Tables
+
+Internet Gateway & NAT Gateways
+1. Internet Gateway: helps our VPC instances connect with the internet
+-public subnets have a route to the internet gateway
+2. NAT Gateways (AWS-managed) & NAT Instances(self managed) allow instances in our Private Subnets to access internet while remaining private
+
+VPC Flow Logs
+capture info about IP traffic going into interfaces:
+-VPC Flow logs
+-Subnet Flow logs
+-Elastic Network Inteface Flow logs
+helps to monitor & trouble shoot connectivity issues. eg: subnets to internet, subnet to subnet, internet to subnet
+captures network info from AWS managed interfaces too: ELB,ElastiCache,RDS,Aurora,etc
+VPC flow logs data can go to S3,CloudWatch logs,& Kinesis Data Firehose
+
+VPC Peering
+-connect two VPC, privately using AWS's network
+-make them behave as if they were in the same network
+-must not have overlapping CIDR(IP address range)
+-VPC Peering connection is not transitive(must be established for each VPC that need to communicate with one another)
+
+VPC Endpoints
+-Endpoints allow you to connect to AWS Services using private network instead of public(www) network
+-this gives enhanced security and lower latency to access AWS services
+-VPC Endpoint Gateway: S3 & DynamoDB
+-VPC Endpoint Interface: the rest
+- only used within VPC
+
+Site to Site VPN & Direct Connect
+Site to Site VPN: 
+connect an on-premises VPN to AWS
+The connection is automatically encrypted 
+goes over the public internet
+Direct Connect(DX):
+Establish a physical connection between on-premises and AWS
+The connection is private, secure and fast
+goes over a private network
+takes least month to establish
+
+3 tier solution architecture:
+
+public subnet(ELB) : private subnet(instances with ASG): data subnet(RDS & ElastiCache)
+
+LAMP Stack on ec2:
+Linux: OS foe ec2
+Apache: Web Server that run on Linux(ec2)
+MySQL: database on RDS
+PHP: Application logic (running on ec2)
+-can add Redis/Memcached(ElastiCache) to include a caching tech
+-to store local app data & software : EBS drive(root)
+
+Wordpress on AWS:
+cliet sends images via Route53 to ELB(public subnet) : instances in multi Az(private subnet) : EFS via ENI (data subnet)
+
+========================================================================================================
+
+Amazon S3
+infinitely scaling storage service of AWS. (object storage)
+usecases: backup&storage, disaster recovery, archive, hybrid cloud storage, application hosting, media hosting, data lakes& big data analytics , software delivery, static website
+
+it allows to store objects(files) in buckets(directories)
+buckets must have globally unique name
+buckets are defined at regional level 
+naming convention: 
+no uppercase, no underscore
+3-63 chars long
+not an IP 
+Must start with lowercase letter or number
+Must NOT start with prefix xn--
+Must NOT end with suffix -s3alias
+
+S3 Objects:
+objects have a key(means full pat. eg: s3://my-bucket/my_file.txt,s3://my_folder1/my_folder2/my_file2.txt)
+key is composed of prefix+object name - s3://my-bucket/my_folder1/another_folder/my_file.txt
+here prefix:my_folder1/another_folder and obj name: my_file.txt
+there's no concept of "directories" within buckets
+obj values are content of the body: max obj size 5TB and if want to upload 5TB must use "multi-part upload"
+metadata(list of text key/value pairs- sytem or user metadata)
+Tags(unicode key/value pair - upto 10) - useful for security/ lifecycle
+Version ID(if versioning is enabled)
+
+S3 - Security
+User-Based: 
+IAM policies- which API calls should be allowed for a specific user from IAM
+Resource-Based: 
+Bucket Policies- bucket wide rules from S3 console-allows cross account
+Object Access Control List(Acl)- finer grain (can be disabled)
+Bucket Access Control List(Acl)- less common(can be disabled)
+
+-an IAM principal can access S3 obj if user IAM permissions ALLOW "OR" the resource policy ALLOWS it 
+"AND" there's no explicit DENY
+
+-Encryption: encrypt objs in Amazon S3 using encryption keys
+
+
+S3 Bucket policies
+JSON based policies:
+	Resources: buckets and objs
+	Effect: Allow/Deny
+	Actions: Set of API to Allow or Deny
+	Principal: The account or user to apply the policy to
+Use S3 bucket policy to: 
+Grant public access to bucket
+Force objs to be encrypted at upload
+Grant access to another account(CROSS ACCOUNT)
+
+
+Bucket setting for Block Public Access
+to prevent data leaks
+if you want ur bucket to be public, leave this on 
+can be set at the account level
+
+
+Amazon S3 - Static Website Hosting
+S3 can host static websites and have them accessible on internet
+the website url will be(depending on region)
+- http://bucket-name.s3-website-aws-region.amazonaws.com
+- http://bucket-name.s3-website.aws-region.amazonaws.com
+if you get a 403 forbidden error make sure the bucket policy allows public reads
+
+Amazon S3 - Versioning
+we can version our files in S3
+enabled at bucket level
+same key overwrite will change the "version": 1,2,3....
+it's best practice to version cause it will protect against unintended deletes and eask roll back to previous version
+- any file that is not versioned prior to enabling versioning will have version "null"
+- suspending versioning does not delete the previous versions
+
+Amazon S3 - Replication(CRR & SRR)
+Must enable Versioning in source and destination buckets
+Cross-Region Replication(CRR)
+Same-Region Replication(SRR)
+Buckets can be in different AWS accounts
+Copying is asynchronous
+Must give proper IAM permissions to S3
+Usecases: 
+CRR-compliance,lower latency access, replication across accounts
+SRR-log aggregation, live replication between production and test accounts
+- After enabling Replication, only new objects are replicated
+- optionally, we can replicate existing objs using S3 Batch Replication
+replicates existing objs and objs that failed replication
+- for DELETE operations
+can replicate delete markers from source to target(optional setting)
+deletions with version ID are not replicated(to avoid malicious deletes)
+- There are no "chaining" of replication
+if bucket 1 ha replication into bucket 2, which has replication into bucket 3
+then objs created in bucket 1 are not replcated to bucket 3
+
+
+S3 Storage Classes
+
+S3 Durability and Availability:
+Durability: 
+High durability (99.99999999999,11 9's) across multiple Az
+if you store 10,000,000 objs with S3 we can on avg expect to incur loss of single obj once every 10,000 yrs
+and it's same for all storage classes
+Availability:
+Measures how readily available a service is 
+varies depending on storage class
+eg: S3 std has 99.99% = not available 53 min a year
+
+1. S3 Standard -general purpose
+99.99% availability
+used for frequently accessed data
+low latency and high throughput
+sustain 2 concurrent facility failures
+usecases: Big data analytics, mobile & gaming applications, content distribution...
+
+Infrequent Access 
+for data that is less frequently accessed, but requires rapid access when needed  and lower cost than S3 std
+
+2. Amazon S3 Standard- Infrequent Access(S3 Standard-IA)
+99.99% availability
+usecases: Disaster Recovery, backups
+
+3. Amazon S3 One Zone- Infrequent Acces(S3 One Zone-IA)
+High durability(99.99999999, 9 9's) in a single Az, data lost when Az is destroyed
+99.5% availablilty
+usecases: Storing secondary backup copies of on-premise data, or data we can recreate
+
+Amazon S3 Glacier Storage Classes
+low cost obj storage meant for archiving/backup
+pricing: price for storage + obj retrieval cost
+
+4. Amazon S3 Glacier Instant Retrieval
+Millisecond retrieval, great for data accessed once a yr 
+minimum storage duration of 90 days
+
+5. Amazon S3 Glacier Flexible Retrieval(formerly Amazon S3 Glacier)
+Expedited(1 to 5 min)
+Standard ( 3 to 5 hours)
+Bulk ( 5 to 12 hours) - freef
+minimum storage duration of 90 days 
+
+6. Amazon S3 Glacier Deep Archieve- for long term storage
+Standard(12 hours)
+Bulk (48 hours)
+minimum storage duration of 180 days
+
+7. S3 Intelligent-Tiering
+• Small monthly monitoring and auto-tiering fee
+• Moves objects automatically between Access Tiers based on usage
+• There are no retrieval charges in S3 Intelligent-Tiering
+• Frequent Access tier (automatic): default tier
+• Infrequent Access tier (automatic): objects not accessed for 30 days
+• Archive Instant Access tier (automatic): objects not accessed for 90 days
+• Archive Access tier (optional): configurable from 90 days to 700+ days
+• Deep Archive Access tier (optional): config. from 180 days to 700+ days
+===================================================================================================
+
+AWS CLI, SDK, IAM Roles & Policies
+
+Ec2 Instance Metadata(IMDS)
+AWS EC2 Instance Metadata(IMDS) is powerful but one of the least known features to developers
+allows AWS EC2 instances to "learn about themselves" without using an IAM Role for that purpose
+the URL is http://169.254.169.254/latest/meta-data 
+we can retrieve the IAM Role name from the metadata, but we CANNOT retrieve the IAM Policy
+Metadata= Info about the EC2 instance
+Userdata= launch script of the ec2 instance
+
+IMDSv2 vs IMDSv1
+-IMDSv1 is accessing http://169.254.169.254/latest/meta-data directly
+-IMDSv2 is more secure and is done in two steps:
+1. Get Session Token(limited validity)- using headers & PUT
+$ TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+2. Use Session Token in IMDSv2 calls- using headers
+$ curl http://169.254.169.254/latest/meta-data/profile -H "X-aws-ec2-metadata-token: $TOKEN" -v 
+
+MFA with CLI
+to use MFA with CLI we must create a temporary session
+to do so, we must run the STS GetSession Token API call
+- aws sts get-session-token --serial-number arn-of-the-mfa-device --token-code code-from-token --duration-seconds 3600
+
+
+AWS SDK Overview
+perform actions on AWS directly from applications code by SDK( software development kit)
+official SDKs are JAVA, .NET , NodE.js, PHP, Pytho(named boto3/botocore), Go, Ruby, C++
+
+-we have to use AWS SDK when coding against AWS Services like DynamoDB
+-AWS CLI uses the Python SDK(boto3)
+-if we don't specify or configure a default region, then us-east-1 will be chosen by default
+
+AWS Limits(Quotas)
+
+API Rate Limits:
+DescribeInstances API for EC2 has a limit of 100 calls per seconds
+GetObject on S3 has a limit of 5500 GET per second per prefix
+For Intermittent Errors: implement Exponential Backoff
+For Consistent Errors: request an API throttling limit increase
+
+Servic Quotas(Service Limits)
+running On-Demand std Instances: 1152 vCPU
+we can request a service limit increase by opening a ticket
+we can request a servcie quota increase by using Service Quotas API
+
+Exponential Backoff (any AWS service)
+if we get ThrottlingException intermittently, use exponential backoff
+Retry mechanism already included in AWS SDK API calls
+Must implement ourself if using the AWS API as-is or in specific cases like 
+-Must only implement the retries on 5xx server errors and throttling
+-don't implement on the 4xx client erros
+it goes like 1st try 1sec
+2nd 2sec
+3rd 4sec
+4th 8sec (so that load on application will decrease by this increasing intervals)
+
+AWS CLI Credentials Provider Chain
+-the CLI will look for credentials in this order
+1. Command line options: --region, --output, --profile
+2. Environmental variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN
+3. CLI credentials file: awas configure
+~/.aws/credentials on Linux / Mac & C:\Users\user\.aws\credentials on Windows
+4. CLI configuration file – aws configure
+~/.aws/config on Linux / macOS & C:\Users\USERNAME\.aws\config on Windows
+5. Container credentials: for ECS tasks
+6. Instance profile credentials: for EC2 Instance profiles
+
+AWS SDK Default Credentials Provider Chain
+the java SDK(eg) will look for credentials in this order
+1. Java system properties: aws.accessKeyId adn aws.secretKey
+2. Environmental variables: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+3. The default credentials profiles file: eg at: ~/.aws/credentials, shared by many SDK
+4. Amazon ECS container credentials: for ECS containers
+5. Instance profile credentials : used on EC2 instances
+
+AWS Credentials Scenario
+- an application deployed on an EC2 instance is using env variables with credentials from an IAM user to call the Amazon S3 API
+- the IAM  user has S3 FUllAccess permissions
+- the application only uses one S3 bucket, so according to best practices:
+	-an IAM Role & EC2 Instance Profile was created for the EC2 instance
+	-The Role was assigned the minimum permissions to access that one S3 bucket
+- the IAM Instance Profile was assigned to the EC2 instance, but it still had access to all S3 buckets because the credentials chain is still giving priorities to the env variables
+
+AWS Credentials Best Practices
+- overall, NEVER EVER STORE AWS CREDENTIALS IN THE CODE
+- best practice is for credentials to be inherited from the credentials chain
+- if using working within AWS, use IAM Roles
+=>ec2 instance roles for ec2 instances
+=> ECS roles for ECS tasks
+=> Lambdha roles for lambda functions
+- if working outside of AWS, use env variables / named profiles
+
+
+Signing AWS API requests
+- when we call the AWS HTTP API, we sign the request so that AWS can identify us, using our AWS credentials(access key & secret key)
+-NOTE: some requests to Amazon S3 don't need to be signed
+- if we use the SDK or CLI, the HTTP requests are signed for us
+- we should sign an AWS HTTP request using Signature v4(SigV4)
+
 
 
 
