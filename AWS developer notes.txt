@@ -605,6 +605,7 @@ cliet sends images via Route53 to ELB(public subnet) : instances in multi Az(pri
 ========================================================================================================
 
 Amazon S3
+
 infinitely scaling storage service of AWS. (object storage)
 usecases: backup&storage, disaster recovery, archive, hybrid cloud storage, application hosting, media hosting, data lakes& big data analytics , software delivery, static website
 
@@ -856,6 +857,202 @@ Signing AWS API requests
 -NOTE: some requests to Amazon S3 don't need to be signed
 - if we use the SDK or CLI, the HTTP requests are signed for us
 - we should sign an AWS HTTP request using Signature v4(SigV4)
+
+==========================================================================================================================
+
+Advanced S3
+
+
+Amazon S3 
+
+- Moving between storage Classes
+-we can transistion objs between storage classes
+-for infrequently accessed obj, move them to std-IA
+-for archive objs that don't need fast access to, move them to Glacier or Glacier Deep Archive
+-moving objs can be automated using Lifecycle Rules
+
+
+Amazon S3- LifeCycle Rules
+
+Transition Actions	: configure objs to transition to another storage class
+- move objs to std-IA class 60 days after creations
+- move to Glacier for archiving after 6 months
+Expiration actions	: configure objs to expire(delete) after sometime 
+- access log files can be set to delete after 365 days 
+- can be used to delete old versions of files(if versioning is enabled)
+- can be used to delete incomplete Multi-Part uploads
+Rules can be created for a certain prefix(eg: s3://mybucket/mp3/*)
+Rules can be created for a certain objs Tags( eg: Department: Finance)
+
+scenario 1 (for Lifecycle rules)
+Your application on ec2 creates imgs thumbnails after profile photos are uploaded to Amazon S3. These thumbnails can be easily recreated, and only need to be kept for 60 days. The source imgs should be able to be immediatley retrieved for these 60 days, and afterwards, the user can wait up to 6 hrs. How would you design this?
+- S3 source imgs can be on std, with a lifecycle configuratin to transition them to Glacier after 60 days
+-S3 thumbnails can be on One-Zone IA, with a lifecycle configuration to expire them after 60 days.
+
+scenario 2 (for lifecycle rule)
+A rule in your company states that you should be able recover your deleted S3 objs immediately for 30 days, although this may happen rarely. After this time, and for up to 365 days, deleted objs should be recoverable within 48 hrs.
+- Enable S3 versioning inorder to have obj versions, so that " deleted objs" are in fact hidden by a "delete marker" and can be recovered
+- Transition the "noncurrent versions" of the obj to std-IA after 30days
+- Transition afterwards the "noncurrent versions"  to Glacier Deep Archive after 365 days
+
+Amazon S3 Analytics - Storage Class Analysis
+-helps us to decide when to transition objs to the right storage class
+- recommendations for std and std-IA (does not work for One-zone IA or Glacier)
+-report is updated daily
+-24 to 48 hrs to start seeing data analysis
+- good first step to put together lifecycle rules
+
+S2 Event Notifications
+-s3: ObjectCreated, s3: ObjectRemoved, s3: ObjectRestore, s3: Replication...
+- obj name filtering possible(*.jpg)
+-usecase: generate thumbnails of imgs uploaded to s3 
+- can create as many "s3 events" as desired 
+- s3 event notifications typically deliver events in seconds but can sometimes take a min or longer
+
+s3 event notifications - IAM permissions
+s3 can have s3 events notifications by IAM permissions to SNS, SQS and lambda functions by using SNS resource (Access) policy, SQS resource(Access) policy and lambda Resouce policy.
+
+s3 event notifications with Amazon EventBridge
+events->s3 bucket->amazon eventbridge ->over 19=8 aws services as destinations by rules
+- advanced filtering options with JSON rules(metadata, obj size,name)
+- Multiple Destinations- ex step functins, kinesis streams/firehose...
+- EventBridge Capablilities- Archive, Replay Events, Reliable delivery
+
+S3 - Baseline Performance
+-amazon s3 automatically scales to high request rates, latency 100-200 ms
+- our application can achieve atleast 3500 PUT/COPY/POST/DELETE or 5500 GET/HEAD requests per second per perfix in a bucket
+- there are no limits to the number of prefixes in a bucket 
+eg: (obj path=> prefix):
+bucket/folder1/sub1/file=> /folder1/sub1/
+bucket/folder1/sub2/file=> /folder1/sub2/
+bucket/1/file => /1/
+bucket/2/file => /2/
+- if we spread reads across all four prefixes evenly, we can achieve 22000 requests per second for GET and HEAD
+
+S3 Performance
+Multi-Part upload:
+-recommedaton for files> 100MB, must use for files >5GB
+- can help parallelize uploads(speed up transfers)
+eg: big file(divide in parts) ==(parallel uploads)==> s3 
+S3 Transfer Acceleration:
+- increase transfer speed by transferring file to an AWS edge location which will forward the data to the S3 bucket in the target region
+- Compatible with multi-part upload
+eg: file in USA ---(fast via public www)--> edge location --(fast via private AWS----> s3 bucket
+
+S3 performance - s3 Byte-Range Fetches
+-parallelize GETs by requesting specific byte ranges
+- better resilience in case of failures
+can be used to speed up downloads
+-[figure]if we have a file in s3 we can achieve by request parts in parallel 
+can be used to retrieve only partial data (for eg the head of a file)
+-[fig] byte-range request for header(first xx bytes) from a file in s3
+
+S3 Select & Glacier Select
+-retrieve less dat using SQL by performing server-side filtering 
+- can filter by rows & columns(simple SQL statements)
+- less network transfer, less CPU cost client-side
+by using this we can have 400% faster and 80% cheaper and 
+works like it gets CSV with s3 select from client to s3 bucket and CSV file filtered by server-side filtering and send filtered dataset to client
+
+S3 Object Tags & Metadata
+
+S3 User-Defined Object Metadata:
+-when uploading an obj, we can also assign metadata
+- Name-value(key-value) pairs
+- User-defined metadata names must begin with "x-amz-meta"
+- Amazon S3 stores user-defined metadat keys in lowercase
+- Metadata can be retrieved while retrieving the object
+
+S3 Object Tags:
+-key value pairs for objects in Amazon S3 
+- useful for fine-graining permissions (only access secific objs with specific tags)
+- useful for analytics purposes(using s3 analytics to grp by tags)
+
+we cannot search the object metadata or object tags
+instead we must use an external DB as a search index such as DynamoDB 
+============================================================================================================================
+
+Amazon S3 Security
+
+Amazon S3 - Object Encryption
+we can encrypt objs in S3 buckets in 4 methods
+Sever-Side Encryption (SSE)
+-Server-Side Encryption with Amazon S3-Managed Keys (SSE-S3) -Enable by Default, encrypts s3 objs using keys handled , managed and owned by AWS
+- Server-Side Encryption with KMS Keys stored in AWS KMS (SSE-KMS)- leverage AWS Key Management Service(AWS KMS) to manage encryption keys
+- Server-Side Encryption with Customer-Provided Keys(SSE-C)- when we want to manage our own encryption keys
+Client-Side Encryption
+
+Amazon S3 Encryption- SSE-S3
+-Encryption using key handled, manage and owned by AWS
+-object is encrypted server-side
+-Encryption type is AES-256
+-Must set header "x-amz-server-side-encryption":"AES-256"
+-enabled by default for new buckets & new objects
+
+Amazon S3 Encryption - SSE-KMS
+-encryption using keys handled and managed by AWS KMS (key management service)
+-KMS advantages : usercontrol + audit key usage using cloudtrail
+-Object is encrypted server side
+-Must set header "x-arm-server-side-encryption":"aws:kms"
+-Limitations: 
+if we use SSE-KMS, we may be impacted by KMS limits
+when we upload, it calls the GenerateDataKey KMS API
+when we download, it calls the Decrypt KMS API
+Count towards the KMS quota per second(5500,10000,30000 req/s based on region)
+
+Amazon S3 Encryption- SSE-C
+-server-side Encryption using keys fully managed by the customer outside of AWS
+-amazon s3 does NOT store the encryption key we provide
+- HTTPS must be used
+- Encryption key must provided in HTTP headers, for every HTTP request made
+
+Amazon s3 Encryption - Client-Side Encryption
+-use client libraries such as Amazon S3 Client-Side Encryption Library
+-Clients must encrypt data themselves before sending to Amazon S3
+-clients must decrypt data themselvees when retrieving from Amazon S3
+-Customer fully manages the keys and encryption cycle
+
+Amazon S3- Encryption in transit (SSL/TLS)
+encryption in flight is also called SSL/TLS
+Amazon S3 exposes two endpoints:
+	-HTTP Endpoint - non encrypted
+	-HTTPS Endpoint - encrypted
+HTTPS is recommended
+HTTPS is manadatory for SSE-C
+most clients would use the HTTPS endpoint by default
+ 
+DSSE-KMS double encryption based on KMS
+
+Amazon S3- Default Encryption vs Bucket Policies
+- SSE-S3 Encryption is automatically applied to new objects stored in S3 bucket
+- Optionally, we can "force encryption" using a bucket policy and refuse any API call to PUT an S3 obj without encryption headers(SSE-KMS or SSE-C)
+- NOTE: Bucket Policies are evaluated before "Default Encryption"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
