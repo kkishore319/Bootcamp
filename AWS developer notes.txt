@@ -1092,21 +1092,116 @@ redacting personally identifiable info for analytics or non-production envs
 converting across data formats, such as converting XML to JSON 
 resizing and watermarking images on the fly using caller-specific details, such the user who requested the object.
 
+============================================================================================================================
+
+CLOUDFRONT
+
+AWS CloudFront
+-content Delivery Network(CDN)
+-improves read performance, content is cached at the edge
+-improves users experience
+-216 points of presence globally(edge locations)
+-DDoS protection(because worldwide), integration with Shield, AWS Web Application Firewall
+
+CloudFront - Origins
+-S3 bucket:
+for distributing files and caching them at the edge
+enhanced security with cloudfront Origin Access Control(OAC)
+OAC is replacing Origin Access Identity(OAI)
+CloudFront can be used as an ingress(to upload files to S3)
+
+Custom Orign(HTTP):
+Application Load Balancer
+EC2 instance
+S3 website(must first enable the bucket as a static S3 website)
+Any HTTP backend we want
+
+CloudFront vs S3 Cross Region Replication
+CloudFront:
+Global Edge Netword
+Files are cached for a TTL (maybe a day)
+Great for static content that must be available everywhere
+S3 Cross Region Replication:
+must be setup for each region we want to replicate 
+files are updated in near real-time
+Read only
+great for dynamic content that needs to be available at low-latency in few regions
+
+CloudFront Caching
+- the cache lives at each cloudfront Edge location
+- CloudFront identifies each obj in the cache using the Cache Key
+- we can maximize the Cache Hit ratio to minimize req to the origin
+- we can invalidate part of the cache using the CreatInvalidation API
 
 
+CloudFront Cache Key
+- a unique identifier fore every obj in the cache
+- by default, consists of hostname+resource portion of the URL
+- if we have an application that serves up content that varies based on user, device, language, location...
+- we can add other elements (HTTP headers, cookies, query strings) to the Cache Key using CloudFront Cache Policies.
 
+CloudFront Policies - Cache Policy
+-Cache based on :
+HTTP Headers: None- Whitelist
+Cookies: None - Whitlelist- Include All-Except-All
+Query Strings: None- Whitelist-Include All-Except-All
+-Control the TTL(0 sec to 1 year), can be set by the origin using the Cache-Control header, Expires header...
+-Create our own policy or use Predefined Managed Policies
+-All HTTP headers, cookies and query strings that we include in the Cache Key are automatically included in origin requests
 
+CloudFront Caching - Cache Policy HTTP headers
+-None:
+Don't include any headers in the Cache Key (except default)
+Headers are not forwarded(except default)
+Best caching performance
+- Whitelist:
+only specified headers included in the Cache Key
+Specified headers are also forwarded to Origin 
 
+CloudFront Cache - Cache Policy Query Strings
+-None:
+don't include any query strings in the Cache Key
+Query strings are not forwarded
+-Whitelist
+only specified query strings included in the Cache Key
+only specified query strings are forwarded 
+-Include All-Except
+include all query strings in the Cache Key except the specified list
+all query strings are forwarded except the specified list
+-All
+include all query strings in the Cache Key
+all query strings are forwarded 
+worst caching performance
 
+CloudFront Policies - Origin Request Policy
+-specify values that we want to include in origin requests without including them in the Cache Key(no duplicated cached content)
+-we can include :
+HTTP headers: None-Whitelist-All viewer headers options
+Cookies: None-Whitelist-All
+Query Strings: None-Whitelist-All
+- ability to add CloudFront HTTP headers and Custom Headers to an origin request that were not included in the viewer request 
+-create our own policy or use Predefined Managed Policies
 
+CloudFront - Cache Invalidations
+- In case we update the back-end origin, CloudFront doesn't know about it and will only get the refreshed content after the TTL has expired
+- However, we can force an entire or partial cache refresh(thus bypassing the TTL) by performing a CloudFront Invalidation
+- we can invalidate all files(*) or a special path(images/*)
 
+CloudFront - Cache Behaviors
+-configure different settings for a given URL path pattern
+-eg: one specific cache behavior to images/*.jpg files on our origin web server
+-Route to different kind of origins/origin grps based on the content type or path pattern 
+/images/*
+/api/*
+/*(default cache behavior)
+-when adding additional Cache Behavior, the Default Cache Behavior is always the last to be processed and is always/*
 
+CloudFront- Cache Behavior - sign in page 
+[image]there will be signed cookies for some caches where we can define to login if we want to access the s3 bucket 
 
-
-
-
-
-
+CloudFront - maximize cache hits by separating static and dynamic distributions
+we can have Static request on CDN layer where there will be no headers/session caching rules required for maximizing cache hits to have static content on s3 bucket and 
+Dynamic requests with Cache based on correct headers and cookie for a Dynamic content(REST,HTTP server) on ALB+EC2 
 
 
 
