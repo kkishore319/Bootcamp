@@ -1203,6 +1203,82 @@ CloudFront - maximize cache hits by separating static and dynamic distributions
 we can have Static request on CDN layer where there will be no headers/session caching rules required for maximizing cache hits to have static content on s3 bucket and 
 Dynamic requests with Cache based on correct headers and cookie for a Dynamic content(REST,HTTP server) on ALB+EC2 
 
+CloudFront -ALB or EC2 as an origin 
+we can connect edge location by allowing public IP of Edge Locations to EC2 instances which must be public 
+but 
+while using ALB we can connect ALB which is public from Edge locations public  IPs from there we can have EC2 instances which are private to ALB
+
+CloudFront Geo Restriction 
+- we can restrict who can access our distribution 
+Allowlist: Allow our users to access our content only if they're in one of the countries on a list of approved countries
+Blocklist: Prevent our users frrom accessing our content if they're in one of the countries on a list of banned countries
+- The "country" is determined using a 3rd party Geo-IP database
+- usecase: Copyright Laws to control access to content  
+
+CloudFront Signed URL/Signed Cookies
+-if we want to distribute paid shared content to premium users over the world
+- we can use CloudFront Signed URL/Cookie. we attach a policy with :
+include URL expiration
+includes IP ranges to access the data from 
+trusted signers(which AWS accounts can create signed URLs)
+- how long should the URL be valid for?
+shared content (movie,music): make it short(a few mins)
+private content(private to the user): we can make it last for years
+- Signed URL= access to individual files(one signed URL per file)
+- Signed Cookies= access to multiple files(one signed cookie for many files)
+
+CloudFront Signed URL vs S3 Pre-Signed URL
+
+CloudFront Signed URL:
+allow access to a path, no matter the origin 
+Account wide key-pair, only the root can manage it
+can filter by IP,path, data, expiration
+can leverage caching features
+
+S3 Pre-Signed URL:
+issue a request as the person who pre-signed the URL 
+uses the IAM key of the signing IAM principal
+limited lifetime
+
+CloudFront - Pricing
+- CloudFront Edge locations are all around world
+- The cost of data out per edge location varies (india has highest and us, mexico& Canada has least)
+
+CloudFront - Price Classes
+- we can reduce the no. of edge locations for cost reduction
+- Three price classes:
+1. Price Class All: all regions - best performance
+2. Price Class 200: most regions, but excludes the most expensive regions(like india)
+3. Price Class 100: only the least expensive regions
+
+CloudFront - Multiple Origin 
+- to route to different kind of origins based on the content type 
+- based on path pattern:
+/images/*
+/api/*
+/*
+
+CloudFront - Origin Groups
+- to increase high-availability and do failover
+- Origin Group: one primary and one secondary origin 
+- if the primary origin fails, the second one is used
+
+CloudFront - Field Level Encryption
+- protect user senitive information through application stack
+- adds an additional layer of security along with HTTPS
+- sensitive information encrypted at the edge close to user
+- uses asymmetric encryption
+- usage :
+specify set of fields in POST requests that we want to be encrypted(upto 10 fields)
+specify the public key to encrypt them 
+
+CloudFront - Real Time Logs
+- Get real-time requests received by 	
+- monitor, analyze, and take actions based on content delivery performance
+- allows you to chose:
+Sampling Rate: percentage of requests of requests for which we want to receive 
+Specific fields and specific Cache Behaviors(path patterns)
+
 
 
 
