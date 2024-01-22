@@ -1279,12 +1279,157 @@ CloudFront - Real Time Logs
 Sampling Rate: percentage of requests of requests for which we want to receive 
 Specific fields and specific Cache Behaviors(path patterns)
 
+================================================================================================================================
+
+ECS, ECR & FARGATE - Docker in AWS
+
+What is Docker?
+- software development platform to deploy apps
+- Apps are packaged in containers that can be run on any OS
+- Apps run the same, regardless of where they're run
+Any machine
+No compatibility issues
+Predictable behavior
+Less work
+Easier to maintain and deploy
+Works with any language, any OS, any technology
+- usecases: microservcies architecture, lift-and-shift apps from on-premises to the AWS cloud,...
+
+Where are Docker images stored?
+- Docker images are stored in Docker Repositories
+- Docker Hub(https://hub.docker.com)
+public repository
+Find base images for many technologies or OS(eg: Ubuntu, MySQL,...)
+- Amazon ECR (Amazon Elastic Container Registry)
+Private Repository
+Public repository( Amazon ECR Public Gallery https://gallery.ecr.aws)
+
+Docker versus Virtual Machines
+- Docker is "sort of" virtualization technology, but not exactly
+- Resources are shared with the host=> many containers on one server
+for normal VMs : infrastructure->Host OS-> Hypervisor->Guest OS(vm) with Apps, Guest OS with Apps, Guest OS with Apps.
+for Docker : infrastructure->Host OS(ec2 instance)->Docker Daemon with many containers which are lightweight and share networking and data etc.
+
+Docker Containers Management on AWS
+
+1. Amazon Elastic Container Service(Amazon ECS): amazon's own container platform
+2. Amazon Elastic Kubernetes Service(Amazon EKS): amazon's managed Kubernetes(open Source)
+3. AWS Fargate: amazon's own Serverless container platform and works well with ECS and with EKS
+4. Amazon ECR: store container images
 
 
+Amazon ECS - EC2 Launch Type
+- ECS = Elastic Container Service
+- Launch Docker containers on AWS = Launch ECS tasks on ECS Clusters
+- EC2 Launch Type: we must provision & maintain the infrastructure(the EC2 instances)
+- Each EC2 instance must run the ECS Agent to register in the ECS Cluster
+- AWS takes care of starting / stopping containers.
 
+Amzon ECS - Fargate Launch Type
+- launch Docker containers on AWS
+- we don't provision the infrastructure(no ec2 instances to manage)
+- it's all Serverless
+- we just create task definitions
+- AWS just runs ECS Tasks for us based on the CPU/RAM we need
+- to scale, just increase the no.of task. Simple - no more EC2 instances
 
+Amazon ECS- IAM Roles for ECS
+- EC2 Instance Profile(EC2 Launch Type only):
+used by the ECS Agent
+makes API calls to ECS service
+send container logs to CloudWatch Logs
+Pull Docker image from ECR
+Reference sensitive data in Secrets Manager or SSM Parameter Store
 
+-ECS Task Role:
+allows each task to have specific role
+use different roles for the different ECS services we run
+Task Role is defined in the task definition
 
+Amazon ECS - Load Balancer Integrations
+- Application Load Balancer supported and works for most usecases
+- Network Load Balancer recommended only for high throughput / high performance usecases, or to pair it with AWS Private Link
+- Classic Load Balancer supported but not recommended(no advanced features - no Fargate)
 
+Amazon ECS - Data Volumes(EFS)
+- mount EFS file systems onto ECS tasks
+- works for both EC2 and Fargate launch types
+- tasks running in any Az will share the same data in the EFS file system
+- Fargate + EFS = Serverless
+- usecases: persistent multi-Az shared storage for containers
+- NOTE: Amazon S3 cannot be mounted as a file system
+
+ECS Service Auto Scaling
+- automatically increase/decrease the desired no.of ECS tasks
+- Amazon ECS Auto Scaling uses AWS Application Auto Scaling
+it's done on 	ECS Service Average CPU Utilization
+		ECS Service Average Memory Utilization - Scale on RAM
+		ALB Request Count Per Target - metric coming from the ALB
+- Target Tracking: scale based on target value for a specific CloudWatch metric
+- Step Scaling: scale based on a specific CloudWatch Alarm breaching
+- Scheduled Scaling: scale based on specified date/time(predictable changes)
+- ECS Service Auto Scaling(task level) is not equal to EC2 Auto Scaling(EC2 instance level)
+- Fargate Auto Scaling is much easier to setup(because Serverless)
+
+EC2 Launch Type - Auto Scaling EC2 Instances
+- Accommodate ECS Service Scaling by adding underlying EC2 instances
+- Auto Scaling Group Scaling:
+	- scale ASG based on CPU Utilization
+	- add EC2 instances over time
+- ECS Cluster Capacity Provider:
+	- used to automatically provision and scale the infrastructure for ECS tasks
+	- Capacity Provider paired with an ASG
+	- add EC2 Instances when there is missing capacity(CPU,RAM)
+
+ECS Rolling Updates
+- when updating from v1 to v2, we can control how many tasks can be started and stopped, and in which order.
+we have minimum healthy percent and maximum percent by these we will decrease the capcity to minimum capacity and add the updated versions as maximum percent and decrease to minimum by removing previous versions and change them to v2.
+
+Amazon ECS Deep dive topics
+
+Amazon ECS - Task Definitions
+- Task definitions are metadata in JSON form to tell ECS how to run a Docker container
+- it contains crucial information, such as:
+Image name
+Port Binding for Container and Host 
+Memory and CPU required
+Environmental variables
+Networking information
+IAM Role
+Logging configuration(eg: CloudWatch)
+- can define upto 10 containers in a Task Definition
+
+Amazon ECS - Load Balancing(EC2 Launch Type)
+- we get a Dynamic Host Port Mapping if we define only the container port in the task definition 
+- the ALB finds the right port on our EC2 Instances
+- we must allow on the EC2 instance's Security Group any port from the ALB's Secruity Group
+
+Amazon ECS - Load Balancing (Fargate)
+- each task has a unique private IP
+- only define the container port(host port is not applicable)
+eg: 
+1. ECS ENI Security Group - allow port 80 from the ALB
+2. ALB Security Group - allow port 80/443 from web
+
+Amazon ECS One IAM Role per Task Definition
+- only Task Definition can have the IAM Role if the services in them need to use ECS task Role then they have to inherit from the Task Definition.
+- every 
+- Role is defined at task definition level not on service level, therefore all tasks in our service will have access to the role actions
+
+Amazon ECS - Environment Variables
+Task Definition can have Environment Variables are come from 
+- Hardcoded - eg: URLs
+- SSM Parameter Store - sensitive variables (eg: API keys, shared configs)
+- Secrets Manager - sensitive variables (eg: DB passwords)
+Environment Files(bulk)  - Amazon S3
+
+Amazon ECS - Data Volumes(Bind Mounts)
+- share data between multiple containers in the same Task Definition
+- works for both EC2 and Fargate tasks
+- EC2 Tasks - using EC2 instance storage: Data are tied to the lifecycle of the EC2 instance
+- Fargate Task - using ephemeral storage: Data are tied to the container(s) using them and 20-200 GiB(default 20 GiB)
+- usecases: 
+1. share ephemeral data between multiple containers
+2. "Sidecar" container pattern, where the "sidecar" container used to send metrics/logs to other destinations
 
 
