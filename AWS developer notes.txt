@@ -1432,4 +1432,130 @@ Amazon ECS - Data Volumes(Bind Mounts)
 1. share ephemeral data between multiple containers
 2. "Sidecar" container pattern, where the "sidecar" container used to send metrics/logs to other destinations
 
+ECS Tasks Placements
+- when a task of type EC2 is launched, ECS must determine where to place it, with the constraints of CPU, memory, and available port.
+- similarly, when a service scales in, ECS needs to determine which task to terminate.
+- to assist with this, we can define a task placement strategy and task placement constraints.
+- NOTE: this is only for ECS with EC2, not for Fargate.
+
+ECS Task Placement Process:
+Task placements strategies are a best effort
+- when Amazon ECS places tasks, it uses the following process to select container instances:
+1. identify the instances that satisfy the CPU, memory, and port requirements in the task definition
+2. identify the instances that satisfy the task placement constraints 
+3. identify the instances that satisfy the task placement strategies
+4. select the instances for task placement.
+
+ECS Task Placement Strategies
+1. Binpack:
+place tasks based on the least available amount of CPU or memory
+this minimizes the no.of instances in use(cost savings)
+JSON: "placementStrategy":[
+		{
+			"field":"memory"
+			"type":"binpack"
+		}
+	]
+
+2. Random: place the task randomly
+Json:
+"placementStrategy": 	[
+	{
+		"type":"random"
+	}
+]
+
+3. Spread:
+place the task evenly based on the specified value
+eg: instanceId, attributes:ecs.availability-zone"
+JSON:
+"placementStrategy":[
+	{
+		"field":"attribute:ecs.availability-zone",
+		"type":"spread"
+	}
+]
+
+- we can also mix them together
+eg:1. JSON:
+"placementStrategy":[
+	{
+		"field":"attribute:ecs.availability-zone",
+		"type":"spread"	
+	},
+	{
+		"field":"instanceId"
+		"type":"spread"	
+	}
+]
+
+2. JSON:
+"placementStrategy":[
+	{
+		"field":"attribute:ecs.availability-zone",
+		"type":"spread"	
+	},
+	{
+		"field":"memory",
+		"type":"binpack"	
+	}
+]
+
+ECS Task Placement Constraints
+- distinctInstance: place each task on a different container instance
+"placementContraints":[
+	{
+
+
+		"type":"distinctInstance"	
+	}
+]
+- memberOf: places task on instances that satisy an expression 
+uses the Cluster Query Language
+"placementConstraints":[
+	{
+		"expression":"attribute:ecs.instance-type=~ t2.*",
+		"type":"memberOf"	
+	}
+]
+
+Amazon ECR(Elastic Container Registry)
+- store and manage Docker images on AWS
+- Private and Public repository(Amazon ECR Public Gallery)
+- Fully integrated with ECS, backed by Amazon S3
+- Access is controlled through IAM(permission erros=> policy)
+- supports image vulnerability scanning, versioning, image tags, image lifecyle...
+
+Amazon ECR - Using AWS CLI
+
+Login command- AWS CLI v2
+aws ecr get-login-password --region | docker login --username AWS --password-stdin AWS_ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com
+
+Docker Commands:
+Push: docker push AWS_ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/demo:latest
+Pull: docker pull AWS_ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/demo:latest
+-in case an EC2 instance(or we) can't pull a Docker image, check IAM permissions
+
+AWS Copilot
+- CLI tool to build, release, and operate production-ready containerized apps
+- run our apps on AppRunner, ECS, and Fargate
+- helps us focus on building apps rather than setting up infrastructure
+- provisions all required infrastructure for containerzed apps (ECS,VPC,ELB,ECR...)
+- automated deployments with one command using CodePipeline
+- deploy to multiple environments
+- troubleshooting, logs, health status...
+
+- use CLI or YAML to describe the architecture of our applications in the Microservice way. Then we will use Copilot CLI to containerize our applications and deploy them. then we get Well-architected infrastructure setup, Deployment Pipeline and Effective Operations and Troubleshooting
+
+
+
+
+
+
+
+
+
+
+
+
 
