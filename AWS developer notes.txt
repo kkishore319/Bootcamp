@@ -1547,6 +1547,133 @@ AWS Copilot
 
 - use CLI or YAML to describe the architecture of our applications in the Microservice way. Then we will use Copilot CLI to containerize our applications and deploy them. then we get Well-architected infrastructure setup, Deployment Pipeline and Effective Operations and Troubleshooting
 
+Amazon EKS overview(Elastic Kubernetes Service)
+- It is a way to launch managed Kubernetes clusters on AWS
+- Kubernetes is an open-source system for automatic deployment, scaling and management of containerized application
+- it's an alternative to ECS, similar goal but different API
+- EKS supports EC2 if we want to deploy worker nodes or Fargate to deploy serverless containers
+- usecases:if a company is already using Kubernetes on-premises or in another cloud, and wants to migrate to AWS using Kubernetes
+- Kubernetes is cloud-agnostic(can be used in any cloud- Azure, GCP,...)
+
+Amazon EKS- Node Types
+Managed Node Groups:
+- creates and manages Nodes (ec2 instances) for us
+- Nodes are part of an ASG managed by EKS
+- Supports On-Demand or Spot Instances
+
+Self-Managed Nodes
+- Nodes created by us and registered to the EKS cluster and managed by an ASG
+- we can use prebuilt AMI-Amazon EKS Optimized AMI
+- supports On-Demand or Spot Instances
+
+AWS Fargate
+- No maintenance required, no nodes managed
+
+Amazon EKS- Data Volumes
+- need to specify StorageClass manifest on our EKS cluster
+- Leverages a Container Storage Interface(CSI) compliant driver
+- support for Amazon EBS, Amazon EFS(works with Fargate), Amazon FSx for Lustre, Amazon FSx for NetApp ONTAP
+
+==============================================================================================================================
+
+AWS Elastic Beanstalk 
+
+Elastic Beanstalk- Overview
+- Elastic Beanstalk is a developer centric view of deploying an application on AWS
+- it uses all the component's we've seen before: EC2,ASG,ELB,RDS,...
+- managed service:
+automatically handles capacity provisioning, load balancing, scaling, application health monitoring, instance configuration,...
+just the application code is the responsibility of the developer
+- we still have full control over the configuration
+- Beanstalk is free but we pay for the underlaying instances
+
+Elastic Beanstalk - Components
+Application: collection of Elastic Beanstalk components(envs,versions,configs)
+Application version: an iteration of our application code
+Environment:
+collection of AWS resources running an application version(only one application version at a time)
+Tiers: Web Server Enviornment Tier & Worker Environment Tier
+we can create multiple envs(dev,test,prod,...)
+
+1. create applicaton 
+2. upload version(if this is updated version we can directly deploy )
+3. launch env
+4. manage env(we can update version from here)  
+
+Elastic Beanstalk - Supported Platforms
+Go, Java SE, Java with Tomcat, .NET Core on Linux, .NET on Windows Server, Node.js, PHP, Python, Ruby, Packer Builder, Single Container Docker, Multi-container Docker, Preconfigured Docker
+- if not supported, we can write our custom platform
+
+Web Server Tier vs Worker Tier:
+the difference is in Worker Env there is SQS Queue to send SQS messages to EC2 instances where as in Web Server Env there will ELB to instances 
+
+in Worker env scale based on the no.of SQS messages and can push messages to SQS queue from another Web Server Tier
+
+Elastic Beanstalk Deployment Modes:
+1. Single Instance Great for dev 
+2. High Availability with Load Balancer Great for prod 
+
+Beanstalk Deployment Options for Updates
+1. All at once(deploy all in one go):
+- fastest deployment 
+- applicaton has downtime
+- great for quick iterations in development env
+- no additional cost
+but instances aren't available to serve traffic for a bit(downtime)
+
+2. Rolling: update a few instances at a time(bucket), and then move onto the next bucket once the first bucket is healthy
+- application is running below capacity
+- can set the bucket size
+- application is running both versions simultaneously
+- no additional cost
+- long deployment
+
+3. Rolling with additional batches: like rolling, but spins up new instances to move the batch(so that the old application is still available)
+- application is running at capacity
+- can set the bucket size
+- application is running both versions simultaneously
+- small additional cost
+- additional batch is removed at the end of the deployment
+- longer deployment
+- good for prod
+
+
+4. Immutable: spins up new instances in a new ASG, deploys version to these instances, and then swaps all the instances when everything is healthy
+- zero downtime
+- New Code is deployed to new instances on a temporary ASG
+- High Cost, double capacity
+- longest deployment
+- quick rollback in case of failures(just terminate new ASG)
+- great for prod
+
+5. Blue Green: create a new env and switch over when ready
+-  not a "direct feature" of Elastic Beanstalk
+- zero downtime and release facility
+- create a new "stage" env and deploy v2 there
+- the new env(green) can be validated independently and roll back if issues
+- Route 53 can be setup using weighted policies to redirect a little bit of traffic to the stage env
+- using Beanstalk, "swap URLs" when done with the env test
+
+
+6. Traffic Splitting: canary testing- send a small % of traffic to new deployment
+- Canary Testing
+- new application version is deployed to a temporary ASG with the same capacity
+- a small % of traffic is sent to the temporary ASG for a configurable amount of time
+- deployment health is monitored
+- if there's a deployment failure, this triggers an automated rollback(very quick)
+- no application downtime
+- new instances are migrated from the temporary to the original ASG
+- old application version is then terminated
+
+
+
+
+
+
+
+
+
+
 
 
 
