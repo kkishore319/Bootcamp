@@ -1665,13 +1665,84 @@ but instances aren't available to serve traffic for a bit(downtime)
 - new instances are migrated from the temporary to the original ASG
 - old application version is then terminated
 
+Elastic Beanstalk CLI
+-we can install an additional CLI called the "EB cli" which makes working with Beanstalk from the CLI easier
+-Basic commands are:
+eb create
+eb status
+eb health
+eb events
+eb logs
+eb open
+eb deploy
+eb config
+eb terminate
+- it's helpful for our automated deployment pipelines
+
+Elastic Beanstalk Deployment Process
+- describe dependencies(requirements.txt for Python, package.json for Node.js)
+- Package code as zip, and describe dependencies
+Python : requirements.txt
+Node.js: package.json
+- Console: upload zip file (creates new app version), and then deploy
+- CLI: create new app version using CLI(uploads zip), and the deploy
+- Elastic Beanstalk will deploy the zip on each EC2, resolve dependencies and start the application
+
+Beanstalk Lifecycle Policy
+- Elastic Beanstalk can store at most 1000 application versions
+- if we don't remove old versions, we won't be able to deploy anymore
+- to phase out old application versions, use a lifecycle policy
+	-based on time(old versions are removed)
+	-based on space(when we have too many versions)
+- versions that are currently used won't be deleted
+- option not to delete the source bundle in S3 to prevent data loss
+
+Elastic Beanstalk Extensions
+- a zip file containing our code must be deployed to Elastic Beanstalk
+- all the parameters set in the UI can be configured with code using files
+- requirements:
+	-in the .ebextensions/ directory in the root of source code
+	-YAML / JSON format
+	-.config extensions(eg: logging, config)
+	-able to modify some default setting using: option_setting
+	-ability to add resources such as RDS, ElastiCache, DynamoDB, etc..
+- resources managed by .ebextensions get deleted if the environment goes away
 
 
+Elastic Beanstalk Under the Hood
+- under the hood, Elastic Beanstalk relies on CloudFormation
+- CloudFormation is used to provision other AWS 
+- usecase: we can define CloudFormation resources in our .ebextensions to provision ElastiCache, an S3 bucket, anything we want
 
+Elastic Beanstalk Cloning
+- clone an env with the exact same configuration
+- useful for deploying a "test" version of our application
+- all resources and configuration are preserved:
+Load Balancer type and configuration
+RDS database type( but the data is not preserved)
+Environment variables
+- after cloning an env, we can change setting
 
+Elastic Beanstalk Migration: Load Balancer
+- after creating an Elastic Beanstalk env, we cannot change the Elastic Load Balancer type (only the configuration)
+- to migrate:
+1. create a new env with the same configuration except LB(can't clone)
+2. deploy our application onto the new env
+3. perform a CNAME swap or Route 53 update
 
+RDS with Elastic Beanstalk
+- RDS can be provisioned with Beanstalk, which is great for dev/test
+- this is not great for prod as the database lifecycle is tied to the Beanstalk env lifecycle
+- the best for prod is to separately create an RDS database and provide our EB application with the connection string
 
-
+Elastic Beanstalk Migration: Decouple RDS
+1. create a snapshot of RDS DB(as a safeguard)
+2. go to the RDS console and protect the RDS database from deletion
+3. create a new Elastic Beanstalk env, without RDS, point application to existing RDS
+4. perform a CNAME swap(blue/green) or Route 53 update, confirm working
+5. terminate the old env (RDS won't be deleted)
+6. delete CloudFormation stack (in DELETE_FAILED state)
+============================================================================================================================================
 
 
 
