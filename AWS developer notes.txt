@@ -1744,16 +1744,333 @@ Elastic Beanstalk Migration: Decouple RDS
 6. delete CloudFormation stack (in DELETE_FAILED state)
 ============================================================================================================================================
 
+AWS CloudFormation
+
+Infrasturcture as Code
+- all we did was a lot of manual work 
+- all this manual work will be very tough to reproduce:
+in another region
+in another AWS account
+within the same region if everything is deleted
+- wouldn't be great if, all our infrastructure was... code?
+- that code would be deployed and create/update/delete our infrastructure
+
+What is CloudFormation
+- CloudFormation is a declarative way of outlining our AWS infrastructure, for any resources
+- for eg, within a CloudFormation template, we say:
+i want a security group
+i want two EC2 machines using this security group
+i want two Elastic IPs for these EC2 machines
+i want an S3 bucket
+i want a load balancer (ELB) in front of these machines
+- then CloudFormation creates those for us, in the right order, with the exact configuration that we specify
+
+Benefits of AWS CloudFormation
+1. Infrastructure as Code
+- no resources are manually created, which is excellent for control
+- the code can be version controlled for example using git
+- changes to the infrastructure are reviewed through code
+2. cost
+- each resources within the stack is stagged with an identifier so we can easily see how much a stack costs us
+- we can estimate the costs of our resources using the CloudFormation template
+- savings strategy: in DEV, we could automation deletion of templates at 5 pm and recreatd at 8 am, safely
+3. productivity
+- ability to destroy and re-create an infrastructure on the cloud on the fly
+- automated generation of Diagram for our templates.
+- declarative programming(no need to figure out ordering and orchestration)
+4. separation of concern: 
+- create many stacks for many apps, and many layers eg: VPC stacks, Network stacks, App stacks
+5. don't re-invent the wheel
+- leverage existing templates on the web
+- leverage the documentation
+
+How CloudFormation Works
+- Templates have to be uploaded in S3 and then referenced in CloudFormation
+- To update a template, we can't edit previous ones. we have to re-upload a new version of the template to AWS
+- stacks are identified by a name
+- deleting a stack deletes every single artifact that was created by CloudFormation
+
+Deploying CloudFormation templates
+Manual way:
+- editing templates in the CloudFormation Desinger
+- using the console to input parameters, etc
+
+Automated way:
+- editing templates in a YAML file
+- using the AWS CLI (Command Line Interface) to deploy the templates
+- recommended way when we finally want to automate our flow 
+
+CloudFormation Building Blocks
+templates components :
+1. Resources: our AWS resources declared in the templates(mandatory)
+2. Parameters: the dynamic inuts for template
+3. Mappings: the static variables for template
+4. Outputs : references to what has been created
+5. Conditionals: list of conditions to perform resource creation
+6. Metadata
+
+Template helpers:
+1. References
+2. Functions
+
+YAML crash course
+- YAML and JSON are the languages we can used for CloudFormation 
+- JSON is horrible for CF
+- YAML is great in so many ways like
+Key value pairs
+Nested objects
+Support Arrays
+Multli line strings
+can include comments
+
+CloudFormation Resources
+- Resources are the core of our CloudFormation template(mandatory)
+- they represent the different AWS components that will be created and configured 
+- Resources are declared and can reference each other 
+- AWS figures out creation, updated and deletes of resources for us 
+- there are over 224 types of resources
+- resource types identifiers are of the form:
+AWS:: aws-product-name::data-type-name
+
+- can we create a dynamic amount of resource?
+no, we can't. everything in the CloudFormation template has to be declared. we can't peform code generation there 
+
+- is every AWS service supported?
+almost. only a select few niches are not there yet
+we can work around that using AWS Lambda Custom Resources.
+
+CloudFormation Parameters
+- Parameters are a way to provide inputs to our AWS CloudFormation template
+- they're important to know about if:
+if we want to reuse our templates across the company
+some inputs can not be determined ahead of time
+- Parameters are extremely powerful, controlled, and can prevent errors from happening in our templates thanks to types.
+
+when should we use a parameter?
+ask questions like :
+is this CloudFormation resource configuration likely to change in the future?
+if so, make it a parameter
+
+- we won't have to re-upload a template to change its content
+
+Parameters Settings:
+parameters can be controlled by all these settings:
+1. Type:
+String, Number, CommaDelimitedList, List<Type>, AWS Parameter
+2. Description
+3. Constraints
+4. ConstraintDescription(string)
+5. Min/MaxLength
+6. Min/MaxValue
+7. Defaults
+8. AllowedValues (array)
+9. AllowedPattern (regexp)
+10. NoEcho (Boolean)
+
+how to Reference a Parmeter 
+- the Fn::Ref function can be leveraged to reference parameters
+- Parameters can be used anywhere in a template
+- the shorthand for this in YAML is !Ref
+
+Pseudo Parameters
+- AWS offers us pseudo parameters in any CloudFormation template
+- these can be used at any time and are enabled by default
+
+CloudFormation Mappings:
+
+- Mappings are fixed variables within our CloudFormation Template
+- they're very handy to differentiate between different envs(dev vs prod), regions( AWS regions), AMI types, etc
+- all the values are hardcoded within the template
+
+when would we use mappings vs parameters?
+- Mappings are great when we know in advance all the values that can be taken and that they can be deduced from the variables such as 
+Region
+Availability Zone
+AWS Account
+Environment (dev or prod) etc
+- they allow safer control over the template 
+- use parameters when the values are really user specific 
+
+Fn::FindInMap Accessing Mapping Values:
+- we use Fn::FindInMap to return a named value from a specific key
+- !FindInMap [ MapName, TopLevelKey, SecondLevelKey ]
+
+CloudFormation Outputs:
+
+- the Outputs section declares optional outputs values that we can import into other stacks(if we export them first)
+- we can also view the outputs in the AWS Console or in using the AWS CLI
+- they're very useful for example if we define a network CloudFormation, and output the variables such as VPC and our Subnet IDs
+- it's the best way to perform some collboration cross stack, as we let expert handle their own part of the stack
+- we can't delete a CloudFormation Stack if its outputs are being referenced by another CloudFormation stack
+
+eg: 
+creating a SSH Security Group as part of one template
+we create an output that references that security group 
+=>check slide 408 image
+
+Cross Stack Reference
+- we then create a second template that leverage that security group
+- for this, we use the Fn:: ImportValue function
+- we can't delete the underlying stack until all the references are deleted too.
+=> check slide 409
+
+CloudFormation Conditions
+
+- conditions are used to control the creation of resources or outputs based on a condition
+- conditions can be whatever we want them to be, but common ones are 
+environment (dev/test/prod)
+AWS region
+any parameter value
+- each condition can reference another, parameter value or mapping
+ 
+how to define a condition?
+eg:
+Conditions:
+	CreateProdResources: !Equals [ !Ref EnvType, prod ]
+
+- the logical ID is for us to choose. it's how we name condition
+- the intrinsic function(logical) can be any of the following 
+Fn:: And
+Fn:: Equals
+Fn:: If
+Fn:: Not
+Fn:: Or
+
+- conditions can be applied to resources/outputs/etc..
+eg:
+Resources:
+  MountPoint:
+    Type: "AWS:EC2::VolumeAttachement"
+    Condition: CreateProdResources
+
+CloudFormation Intrinsic Functions
+
+- Ref
+- Fn::GetAtt
+- Fn::FindInMap
+- Fn::ImportValue
+- Fn::Join
+- Fn::Sub
+- Condition Functions( Fn::If, Fn::Not, Fn::Equals, etc...)
+
+Fn::Ref
+- the Fn::Ref function can be leveraged to reference
+Parameters=> returns the value of the parameter
+Resources => returns the physical ID of the underlying resource (eg: EC2)
+- the shorthand for this is YAML is !Ref
+eg:
+DbSubnet1:
+  Type: AWS::EC2::Subnet
+  Properties::
+    VpcId: !Ref MyVPC
+
+Fn::GetAtt
+- attributes are attached to any resources we create
+- to know the attributes of our resources, the best place to look at is the documentation 
+- for eg: the Az of an EC2 machine
+
+eg:
+Resources:
+  EC2Instances:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-1234567
+      InstanceType: t2.micro
+
+NewVolume:
+  Type: "AWS:EC2::Volume"
+  Condition: CreateProdResources
+  Propertiees:
+    Size: 100
+    AvailabilityZone:
+      !GetAtt: EC2Instance.AvailabilityZone
+
+Fn::FindInMap Accessing Mapping Values
+- we use Fn::FindInMap to return a named value from a specific key
+- !FindInMap [ MapName, TopLevelKey, SecondLevelKey ]   
+
+Fn::ImportValue
+- import values that are exported in other templates
+- for this, we use the Fn::ImportValue function
+
+Fn::Join
+- Join values with a delimiter
+syntax: !Join [ delimiter, [ comma-delimited list of values ] ] 
+eg:  !Join [ ":", [a,b,c]] this creates "a:b:c"
+
+Fn:: Sub
+- Fn::Sub or !Sub as a shorthand, is used to substitute variables from a text. it's a very handy function that will allow us to fully customize your templates.
+- for eg: we can combine Fn::Sub with Reference or AWS Pseudo variables.
+- String must contain ${VariableName} and will substitute them 
+!Sub 
+  - String
+  - { Var1Name: Var1Value, Var2Name : Var2Value }
+
+Condition Functions
+Conditions: 
+  CreateProdResources: !Equals [ !Ref EnvType, prod ]
+- the logical ID is for us to choose. It's how we name condition 
+- the intrinsic functin(logical) can be any of the following:
+Fn::And
+Fn::Equals
+Fn::If
+Fn::Not
+Fn::Or
 
 
+CoudFormation Rollbacks
 
+Stack Creation Fails:
+- Default: everything rolls back (gets deleted). we can look at the log
+- option to disable rollback and troubleshoot what happened
 
+Stack Update Fails:
+- The stack automatically rolls back to the previous known working state
+- ability to see in the log what happened and error messages
 
+CloudFormation Stack Notifications
+- send Stack events to SNS Topic (Email,Lambda,..)
+- enable SNS Integration using Stack Options
 
+ChangeSets
+- When we update a stack, we need to know what changes before it happens for greater confidence
+- ChangeSets won't say if the update will be successful 
 
+Nested stacks
+- Nested stacks are stacks as part of other stacks
+- they allow us to isolate repeated patterns/common components in separate stacks and call them from other stacks
+- eg: load balancer configuration that is re-used , security group that is re-used
+- Nested stacks are considered best practice
+- to update a nested stack, always update the parent(root stack)
 
+CloudFormation - Cross vs Nested Stacks
+Cross Stacks
+- helpful when stacks have different lifecycles
+- use Outputs Export and Fn::ImportValue
+- when we need to pass export values to many stacks(VPC Id, etc...)
 
+Nested Stacks
+- helpful when components must be re-used 
+- eg: re-use how to properly configure an Application Load Balancer
+- the nested stack only is important to the higher level stack(it's not shared)
 
+CloudFormation - StackSets
+- create, update, or delete stacks across multiple accounts and regions with a single operation.
+- Administrator account to create StackSets
+- Trusted accounts to created, update, delete stack instances from StackSets
+- when we update a stack set, all associated stack instances are updated throughout all accounts and regions.
 
+CloudFormation Drift
+- CloudFormation allows us to create infrastructure
+- but it doesn't protect us against manual configuration changes
+- we can use CloudFormation drift to know if our resources have drifted
+
+CloudFormation Stack Policies
+- during a CloudFormation Stack update, all update actions are allowed on all resources(default)
+- A stack Policy is a JSON document that defines the update actions that are allowed on specific resources during Stack updates
+- Protect resources from unintentional updates
+- when we set a Stack Policy, all resources in the Stack are protected by default
+- specify an explicit ALLOW for the resources we want to be allowed to be updated.
+- allow updates on all resources except the ProductionDatabase
 
 
