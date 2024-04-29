@@ -7,7 +7,7 @@ public class Words {
 	 private String selectedword;
 	private String[] randomwords= {"files", "comet", "rapid", "teams","super",
 			"train", "camera", "mobile","patrick","realme","pilot", "laptop",
-			"book", "drink", "capgemini", "window","return", "guess","magic","ice cream"};
+			"book", "drink", "batman", "window","return", "guess","magic","ice cream"};
 	
 	
 	private Random r= new Random();
